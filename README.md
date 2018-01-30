@@ -7,7 +7,7 @@
 </h3>
 
 <p align="center">
-  A small library for dynamic-to-static document mapping
+  A small library for flexible document mapping
 </p>
 
 <p align="center">
