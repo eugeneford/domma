@@ -21,6 +21,7 @@ export default class MutationDriver {
     this.map = {};
     this.lastConductedMutations = undefined;
     this.conductMutations = this.conductMutations.bind(this);
+    this.conductMutation = this.conductMutation.bind(this);
   }
 
   connectStaticDocument(staticDOM) {

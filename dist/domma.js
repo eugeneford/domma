@@ -144,7 +144,7 @@ var Domma = function () {
     key: 'conductTransaction',
     value: function () {
       var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(transaction) {
-        var liveDOM, mutation;
+        var liveDOM;
         return regeneratorRuntime.wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
@@ -167,14 +167,13 @@ var Domma = function () {
                 return transaction(liveDOM);
 
               case 7:
-                mutation = _context.sent;
-                _context.next = 10;
+                _context.next = 9;
                 return this.observer.disconnect();
 
-              case 10:
-                return _context.abrupt('return', mutation);
+              case 9:
+                return _context.abrupt('return', this.driver.getLastConductedMutations());
 
-              case 11:
+              case 10:
               case 'end':
                 return _context.stop();
             }
@@ -216,6 +215,10 @@ var _generateUuid2 = _interopRequireDefault(_generateUuid);
 
 var _anodum = __webpack_require__(4);
 
+var _squashMutations = __webpack_require__(5);
+
+var _squashMutations2 = _interopRequireDefault(_squashMutations);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -230,8 +233,9 @@ var MutationDriver = function () {
     }, options);
 
     this.map = {};
-
+    this.lastConductedMutations = undefined;
     this.conductMutations = this.conductMutations.bind(this);
+    this.conductMutation = this.conductMutation.bind(this);
   }
 
   _createClass(MutationDriver, [{
@@ -290,10 +294,24 @@ var MutationDriver = function () {
       return this.liveDOM;
     }
   }, {
+    key: 'getLastConductedMutations',
+    value: function getLastConductedMutations() {
+      return this.lastConductedMutations;
+    }
+  }, {
+    key: 'isReferenceId',
+    value: function isReferenceId(id) {
+      return Object.prototype.hasOwnProperty.call(this.map, id);
+    }
+  }, {
     key: 'getReferenceId',
     value: function getReferenceId(liveElement) {
       if (!(0, _anodum.isElementNode)(liveElement)) {
-        throw new TypeError('liveElement is not an Element');
+        throw new TypeError('liveElement is not an Element node');
+      }
+
+      if (liveElement.ownerDocument !== this.liveDOM) {
+        throw new ReferenceError('liveElement doesn\'t belong to connected live document');
       }
 
       return liveElement.getAttribute(this.options.bindAttribute);
@@ -301,47 +319,26 @@ var MutationDriver = function () {
   }, {
     key: 'hasReference',
     value: function hasReference(liveElement) {
-      return this.map.hasOwnProperty(this.getReferenceId(liveElement));
+      return Object.prototype.hasOwnProperty.call(this.map, this.getReferenceId(liveElement));
     }
   }, {
     key: 'getReference',
     value: function getReference(liveElement) {
-      if (!this.hasReference(liveElement)) return;
-      return this.map[this.getReferenceId(liveElement)].staticElement;
+      var id = this.getReferenceId(liveElement);
+      if (!this.isReferenceId(id)) return undefined;
+      return this.map[id].staticElement;
     }
   }, {
-    key: 'squashMutations',
-    value: function squashMutations(mutations) {
-      var filtered = [];
-
-      mutations.reverse().forEach(function (mutation) {
-        switch (mutation.type) {
-          case 'attributes':
-            var filteredMutation = filtered.find(function (mut) {
-              return mut.target === mutation.target && mut.attributeName === mutation.attributeName;
-            });
-
-            if (!filteredMutation) filtered.push(mutation);
-            break;
-          default:
-            filtered.push(mutation);
-        }
-      });
-
-      return filtered;
+    key: 'conductMutation',
+    value: function conductMutation(mutation) {
+      console.log(this.getReference(mutation.target));
     }
   }, {
     key: 'conductMutations',
-    value: function conductMutations(rawMutations) {
-      var _this2 = this;
-
-      var mutations = this.squashMutations(rawMutations);
-
-      console.log(mutations);
-
-      this.squashMutations(mutations).forEach(function (mutation) {
-        console.log(_this2.getReference(mutation.target));
-      });
+    value: function conductMutations(mutations) {
+      var conductedMutations = (0, _squashMutations2.default)(mutations);
+      conductedMutations.forEach(this.conductMutation);
+      this.lastConductedMutations = conductedMutations;
     }
   }]);
 
@@ -376,6 +373,43 @@ module.exports = function () {
 /***/ (function(module, exports) {
 
 module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = function (rawMutations) {
+  var mutations = [];
+
+  rawMutations.reverse().forEach(function (rawMutation) {
+    switch (rawMutation.type) {
+      case 'attributes':
+        {
+          var prioritizedMutation = mutations.find(function (mutation) {
+            var isSameTarget = mutation.target === rawMutation.target;
+            var isSameAttribute = mutation.attributeName === rawMutation.attributeName;
+            return isSameTarget && isSameAttribute;
+          });
+
+          if (!prioritizedMutation) mutations.push(rawMutation);
+          break;
+        }
+      default:
+        {
+          mutations.push(rawMutation);
+        }
+    }
+  });
+
+  return mutations;
+};
 
 /***/ })
 /******/ ])["default"];
