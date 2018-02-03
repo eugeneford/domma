@@ -331,7 +331,30 @@ var MutationDriver = function () {
   }, {
     key: 'conductMutation',
     value: function conductMutation(mutation) {
-      console.log(this.getReference(mutation.target));
+      var liveNode = mutation.target;
+      var staticNode = this.getReference(liveNode);
+
+      if (!staticNode) return;
+
+      console.log(staticNode);
+
+      switch (mutation.type) {
+        case 'attributes':
+          {
+            var attribute = mutation.attributeName;
+            var value = liveNode.getAttribute(attribute);
+            staticNode.setAttribute(attribute, value);
+            break;
+          }
+        case 'childList':
+          {
+            break;
+          }
+        default:
+          {
+            break;
+          }
+      }
     }
   }, {
     key: 'conductMutations',

@@ -103,7 +103,27 @@ export default class MutationDriver {
   }
 
   conductMutation(mutation) {
-    console.log(this.getReference(mutation.target));
+    const liveNode = mutation.target;
+    const staticNode = this.getReference(liveNode);
+
+    if (!staticNode) return;
+
+    console.log(staticNode);
+
+    switch (mutation.type) {
+      case 'attributes': {
+        const attribute = mutation.attributeName;
+        const value = liveNode.getAttribute(attribute);
+        staticNode.setAttribute(attribute, value);
+        break;
+      }
+      case 'childList': {
+        break;
+      }
+      default: {
+        break;
+      }
+    }
   }
 
   conductMutations(mutations) {
