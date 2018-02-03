@@ -10,7 +10,7 @@ export default function (rawMutations) {
           return isSameTarget && isSameAttribute;
         });
 
-        if (!prioritizedMutation) mutations.push(rawMutation);
+        if (!prioritizedMutation) mutations.unshift(rawMutation);
         break;
       }
       default: {
@@ -19,5 +19,5 @@ export default function (rawMutations) {
     }
   });
 
-  return mutations;
+  return mutations.reverse();
 }

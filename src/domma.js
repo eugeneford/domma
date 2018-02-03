@@ -23,7 +23,7 @@ export default class Domma {
       throw new ReferenceError('static document is not connected');
     }
 
-    const liveDOM = this.driver.composeLiveNode(staticDOM);
+    const liveDOM = this.driver.composeLiveReference(staticDOM);
 
     this.driver.connectLiveDocument(liveDOM);
   }
