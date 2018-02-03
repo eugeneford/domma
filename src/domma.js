@@ -8,8 +8,8 @@ export default class Domma {
       childList: true,
       attributes: true,
       attributeOldValue: true,
-      subtree: true
-    }
+      subtree: true,
+    };
   }
 
   connectStaticDocument(staticDOM) {
@@ -40,9 +40,9 @@ export default class Domma {
     }
 
     await this.observer.observe(liveDOM, this.config);
-    const mutation = await transaction(liveDOM);
+    await transaction(liveDOM);
     await this.observer.disconnect();
 
-    return mutation;
+    return this.driver.getLastConductedMutations();
   }
 }

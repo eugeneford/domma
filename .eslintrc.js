@@ -1,3 +1,9 @@
 module.exports = {
-    "extends": "airbnb"
+  extends: 'airbnb',
+  globals: {
+    window: true,
+    document: true,
+    MutationObserver: true,
+
+  }
 };

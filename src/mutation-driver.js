@@ -1,5 +1,4 @@
 import generateUuid from 'generate-uuid';
-
 import {
   isDocumentNode,
   isElementNode,
@@ -7,6 +6,8 @@ import {
   getNodeByTreePath,
   traverseNode,
 } from 'anodum';
+
+import squashMutations from './squash-mutations';
 
 export default class MutationDriver {
   constructor(options) {
@@ -18,7 +19,7 @@ export default class MutationDriver {
     };
 
     this.map = {};
-
+    this.lastConductedMutations = undefined;
     this.conductMutations = this.conductMutations.bind(this);
   }
 
@@ -70,50 +71,43 @@ export default class MutationDriver {
     return this.liveDOM;
   }
 
+  getLastConductedMutations() {
+    return this.lastConductedMutations;
+  }
+
+  isReferenceId(id) {
+    return Object.prototype.hasOwnProperty.call(this.map, id);
+  }
+
   getReferenceId(liveElement) {
     if (!isElementNode(liveElement)) {
-      throw new TypeError('liveElement is not an Element');
+      throw new TypeError('liveElement is not an Element node');
+    }
+
+    if (liveElement.ownerDocument !== this.liveDOM) {
+      throw new ReferenceError('liveElement doesn\'t belong to connected live document');
     }
 
     return liveElement.getAttribute(this.options.bindAttribute);
   }
 
   hasReference(liveElement) {
-    return this.map.hasOwnProperty(this.getReferenceId(liveElement));
+    return Object.prototype.hasOwnProperty.call(this.map, this.getReferenceId(liveElement));
   }
 
   getReference(liveElement) {
-    if (!this.hasReference(liveElement)) return;
-    return this.map[this.getReferenceId(liveElement)].staticElement;
+    const id = this.getReferenceId(liveElement);
+    if (!this.isReferenceId(id)) return undefined;
+    return this.map[id].staticElement;
   }
 
-  squashMutations(mutations){
-    const filtered = [];
-
-    mutations.reverse().forEach((mutation) => {
-      switch (mutation.type) {
-        case 'attributes':
-          const filteredMutation = filtered.find((mut) => {
-            return mut.target === mutation.target && mut.attributeName === mutation.attributeName;
-          });
-
-          if (!filteredMutation) filtered.push(mutation);
-          break;
-        default:
-          filtered.push(mutation);
-      }
-    });
-
-    return filtered;
+  conductMutation(mutation) {
+    console.log(this.getReference(mutation.target));
   }
 
-  conductMutations(rawMutations) {
-    const mutations = this.squashMutations(rawMutations);
-
-    console.log(mutations);
-
-    this.squashMutations(mutations).forEach((mutation) => {
-      console.log(this.getReference(mutation.target));
-    });
+  conductMutations(mutations) {
+    const conductedMutations = squashMutations(mutations);
+    conductedMutations.forEach(this.conductMutation);
+    this.lastConductedMutations = conductedMutations;
   }
 }
