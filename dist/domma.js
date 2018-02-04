@@ -105,16 +105,24 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Domma = function () {
   function Domma(options) {
+    var _this = this;
+
     _classCallCheck(this, Domma);
 
-    this.driver = new _mutationDriver2.default(options);
-    this.observer = new MutationObserver(this.driver.conductMutations);
     this.config = {
       childList: true,
       attributes: true,
       attributeOldValue: true,
       subtree: true
     };
+
+    this.driver = new _mutationDriver2.default(options);
+    this.transactionStatus = 'resolved';
+    this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
+    this.mutationObserver = new MutationObserver(function (mutations) {
+      if (_this.isTransactionPending()) return;
+      _this.driver.addAdditiveMutations(mutations);
+    });
   }
 
   _createClass(Domma, [{
@@ -133,12 +141,24 @@ var Domma = function () {
 
       var liveDOM = this.driver.composeLiveReference(staticDOM);
 
-      this.driver.connectLiveDocument(liveDOM);
+      this.connectLiveDocument(liveDOM);
     }
   }, {
     key: 'connectLiveDocument',
     value: function connectLiveDocument(liveDOM) {
+      this.mutationObserver.disconnect();
       this.driver.connectLiveDocument(liveDOM);
+      this.mutationObserver.observe(liveDOM, this.config);
+    }
+  }, {
+    key: 'isTransactionResolved',
+    value: function isTransactionResolved() {
+      return this.transactionStatus === 'resolved';
+    }
+  }, {
+    key: 'isTransactionPending',
+    value: function isTransactionPending() {
+      return this.transactionStatus === 'pending';
     }
   }, {
     key: 'conductTransaction',
@@ -160,20 +180,30 @@ var Domma = function () {
 
               case 3:
                 _context.next = 5;
-                return this.observer.observe(liveDOM, this.config);
+                return 'pending';
 
               case 5:
-                _context.next = 7;
+                this.transactionStatus = _context.sent;
+                _context.next = 8;
+                return this.transactionObserver.observe(liveDOM, this.config);
+
+              case 8:
+                _context.next = 10;
                 return transaction(liveDOM);
 
-              case 7:
-                _context.next = 9;
-                return this.observer.disconnect();
-
-              case 9:
-                return _context.abrupt('return', this.driver.getLastConductedMutations());
-
               case 10:
+                _context.next = 12;
+                return this.transactionObserver.disconnect();
+
+              case 12:
+                _context.next = 14;
+                return 'resolved';
+
+              case 14:
+                this.transactionStatus = _context.sent;
+                return _context.abrupt('return', this.driver.getLastTransaction());
+
+              case 16:
               case 'end':
                 return _context.stop();
             }
@@ -232,9 +262,10 @@ var MutationDriver = function () {
       forEachReferenceSave: function forEachReferenceSave() {}
     }, options);
 
-    this.map = {};
-    this.lastConductedMutations = undefined;
-    this.conductMutations = this.conductMutations.bind(this);
+    this.referenceMap = {};
+    this.additiveMutations = [];
+    this.lastTransaction = undefined;
+    this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
   }
 
@@ -243,15 +274,15 @@ var MutationDriver = function () {
     value: function cleanReferenceMap() {
       var _this = this;
 
-      var records = Object.keys(this.map);
+      var records = Object.keys(this.referenceMap);
       records.forEach(function (id) {
-        var staticNode = _this.map[id].staticNode;
+        var staticNode = _this.referenceMap[id].staticNode;
 
         var node = staticNode;
 
         while (node && !(0, _anodum.isDocumentNode)(node)) {
           if (!node.parentNode) {
-            delete _this.map[id];
+            delete _this.referenceMap[id];
             return;
           }
           node = node.parentNode;
@@ -279,34 +310,28 @@ var MutationDriver = function () {
   }, {
     key: 'saveReference',
     value: function saveReference(liveNode, staticNode) {
-      var id = (0, _generateUuid2.default)();
+      var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
 
-      if ((0, _anodum.isElementNode)(liveNode)) {
-        liveNode.setAttribute(this.options.referenceAttribute, id);
-      } else if ((0, _anodum.isNonEmptyTextNode)(liveNode)) {
-        var anchor = this.options.referenceAttribute + ':' + id;
-        var comment = document.createComment(anchor);
-        liveNode.parentNode.insertBefore(comment, liveNode);
-      }
-      this.map[id] = { staticNode: staticNode };
+      liveNode.setAttribute(this.options.referenceAttribute, id);
+      this.referenceMap[id] = { staticNode: staticNode };
     }
   }, {
     key: 'composeStaticReference',
-    value: function composeStaticReference(liveNode) {
+    value: function composeStaticReference(liveNode, id) {
       var _this2 = this;
 
       var staticNode = liveNode.cloneNode(true);
       var rootPath = (0, _anodum.getTreePathOfNode)(liveNode);
 
       (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
-        if ((0, _anodum.isCommentNode)(lNode)) return;
-        if ((0, _anodum.isElementNode)(lNode) && (0, _anodum.isChildOfTag)(lNode, 'svg')) return;
+        if (!(0, _anodum.isElementNode)(lNode)) return;
 
         path.splice(0, rootPath.length, 0);
 
         var sNode = (0, _anodum.getNodeByTreePath)(staticNode, path);
+        var refId = liveNode === lNode ? id : undefined;
 
-        _this2.saveReference(lNode, sNode);
+        _this2.saveReference(lNode, sNode, refId);
         _this2.options.forEachReferenceSave(lNode, sNode);
       }, true);
 
@@ -314,7 +339,7 @@ var MutationDriver = function () {
     }
   }, {
     key: 'composeLiveReference',
-    value: function composeLiveReference(staticNode) {
+    value: function composeLiveReference(staticNode, id) {
       var _this3 = this;
 
       if (!(0, _anodum.isDocumentNode)(staticNode) && !(0, _anodum.isElementNode)(staticNode)) {
@@ -325,12 +350,12 @@ var MutationDriver = function () {
       var liveNode = staticNode.cloneNode(true);
 
       (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
-        if ((0, _anodum.isCommentNode)(lNode)) return;
-        if ((0, _anodum.isElementNode)(lNode) && (0, _anodum.isChildOfTag)(lNode, 'svg')) return;
+        if (!(0, _anodum.isElementNode)(lNode)) return;
 
         var sNode = (0, _anodum.getNodeByTreePath)(staticRoot, path);
+        var refId = liveNode === lNode ? id : undefined;
 
-        _this3.saveReference(lNode, sNode);
+        _this3.saveReference(lNode, sNode, refId);
         _this3.options.forEachReferenceSave(lNode, sNode);
       }, true);
 
@@ -347,28 +372,22 @@ var MutationDriver = function () {
       return this.liveDOM;
     }
   }, {
-    key: 'getLastConductedMutations',
-    value: function getLastConductedMutations() {
-      return this.lastConductedMutations;
+    key: 'getLastTransaction',
+    value: function getLastTransaction() {
+      return this.lastTransaction;
     }
   }, {
     key: 'isReferenceId',
     value: function isReferenceId(id) {
-      return Object.prototype.hasOwnProperty.call(this.map, id);
+      return Object.prototype.hasOwnProperty.call(this.referenceMap, id);
     }
   }, {
     key: 'getReferenceId',
     value: function getReferenceId(liveNode) {
-      if (!(0, _anodum.isElementNode)(liveNode) && !(0, _anodum.isTextNode)(liveNode)) return undefined;
+      if (!(0, _anodum.isElementNode)(liveNode)) return undefined;
 
       if (liveNode.ownerDocument !== this.liveDOM) {
         throw new ReferenceError('liveNode doesn\'t belong to connected live document');
-      }
-
-      if ((0, _anodum.isTextNode)(liveNode)) {
-        if (!(0, _anodum.isCommentNode)(liveNode.previousSibling)) return undefined;
-        var anchor = liveNode.previousSibling.nodeValue.split(':');
-        return anchor[0] === this.options.referenceAttribute ? anchor[1] : undefined;
       }
 
       return liveNode.getAttribute(this.options.referenceAttribute);
@@ -377,11 +396,11 @@ var MutationDriver = function () {
     key: 'getPreviousReferenceId',
     value: function getPreviousReferenceId(liveNode) {
       var referenceId = void 0;
-      var node = liveNode.previousSibling;
+      var node = liveNode.previousElementSibling;
       while (node) {
         referenceId = this.getReferenceId(node);
         if (referenceId) break;
-        node = node.previousSibling;
+        node = node.previousElementSibling;
       }
 
       return referenceId;
@@ -390,11 +409,11 @@ var MutationDriver = function () {
     key: 'getNextReferenceId',
     value: function getNextReferenceId(liveNode) {
       var referenceId = void 0;
-      var node = liveNode.nextSibling;
+      var node = liveNode.nextElementSibling;
       while (node) {
         referenceId = this.getReferenceId(node);
         if (referenceId) break;
-        node = node.nextSibling;
+        node = node.nextElementSibling;
       }
 
       return referenceId;
@@ -403,11 +422,11 @@ var MutationDriver = function () {
     key: 'getParentReferenceId',
     value: function getParentReferenceId(liveNode) {
       var referenceId = void 0;
-      var node = liveNode.parentNode;
+      var node = liveNode.parentElement;
       while (node) {
         referenceId = this.getReferenceId(node);
         if (referenceId) break;
-        node = node.parentNode;
+        node = node.parentElement;
       }
 
       return referenceId;
@@ -415,14 +434,14 @@ var MutationDriver = function () {
   }, {
     key: 'hasReference',
     value: function hasReference(liveNode) {
-      return Object.prototype.hasOwnProperty.call(this.map, this.getReferenceId(liveNode));
+      return Object.prototype.hasOwnProperty.call(this.referenceMap, this.getReferenceId(liveNode));
     }
   }, {
     key: 'getReference',
     value: function getReference(liveNode) {
       var id = this.getReferenceId(liveNode);
       if (!this.isReferenceId(id)) return undefined;
-      return this.map[id].staticNode;
+      return this.referenceMap[id].staticNode;
     }
   }, {
     key: 'setReferenceAttribute',
@@ -431,12 +450,7 @@ var MutationDriver = function () {
         throw new ReferenceError('reference with specified id is not found');
       }
 
-      var staticNode = this.map[id].staticNode;
-
-
-      if (!(0, _anodum.isElementNode)(staticNode)) {
-        throw new TypeError('reference is not an Element');
-      }
+      var staticNode = this.referenceMap[id].staticNode;
 
       staticNode.setAttribute(attr, value);
     }
@@ -447,12 +461,7 @@ var MutationDriver = function () {
         throw new ReferenceError('reference with specified id is not found');
       }
 
-      var staticNode = this.map[id].staticNode;
-
-
-      if (!(0, _anodum.isElementNode)(staticNode)) {
-        throw new TypeError('reference is not an Element');
-      }
+      var staticNode = this.referenceMap[id].staticNode;
 
       return staticNode.hasAttribute(attr);
     }
@@ -463,12 +472,7 @@ var MutationDriver = function () {
         throw new ReferenceError('reference with specified id is not found');
       }
 
-      var staticNode = this.map[id].staticNode;
-
-
-      if (!(0, _anodum.isElementNode)(staticNode)) {
-        throw new TypeError('reference is not an Element');
-      }
+      var staticNode = this.referenceMap[id].staticNode;
 
       staticNode.removeAttribute(attr);
     }
@@ -476,10 +480,10 @@ var MutationDriver = function () {
     key: 'removeReference',
     value: function removeReference(id) {
       if (!this.isReferenceId(id)) {
-        throw new ReferenceError('reference with specified id is not find');
+        throw new ReferenceError('reference with specified id is not found');
       }
 
-      var staticNode = this.map[id].staticNode;
+      var staticNode = this.referenceMap[id].staticNode;
 
       staticNode.parentNode.removeChild(staticNode);
       this.cleanReferenceMap();
@@ -488,14 +492,14 @@ var MutationDriver = function () {
     key: 'appendReference',
     value: function appendReference(liveNode, containerId) {
       if (!this.isReferenceId(containerId)) {
-        throw new ReferenceError('reference with specified id is not find');
+        throw new ReferenceError('reference with specified id is not found');
       }
 
       if (!(0, _anodum.isNode)(liveNode)) {
         throw new TypeError('liveNode is not a Node');
       }
 
-      var staticContainer = this.map[containerId].staticNode;
+      var staticContainer = this.referenceMap[containerId].staticNode;
       var staticNode = this.composeStaticReference(liveNode);
 
       staticContainer.appendChild(staticNode);
@@ -504,17 +508,79 @@ var MutationDriver = function () {
     key: 'insertReferenceBefore',
     value: function insertReferenceBefore(liveNode, siblingId) {
       if (!this.isReferenceId(siblingId)) {
-        throw new ReferenceError('reference with specified id is not find');
+        throw new ReferenceError('reference with specified id is not found');
       }
 
       if (!(0, _anodum.isNode)(liveNode)) {
         throw new TypeError('liveNode is not a Node');
       }
 
-      var siblingNode = this.map[siblingId].staticNode;
+      var siblingNode = this.referenceMap[siblingId].staticNode;
       var staticNode = this.composeStaticReference(liveNode);
 
       siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+    }
+  }, {
+    key: 'replaceReference',
+    value: function replaceReference(liveNode, referenceId) {
+      if (!this.isReferenceId(referenceId)) {
+        throw new ReferenceError('reference with specified id is not found');
+      }
+
+      var oldStaticElement = this.referenceMap[referenceId].staticNode;
+      var newStaticElement = this.composeStaticReference(liveNode);
+
+      this.reduceAdditiveMutations(liveNode);
+
+      newStaticElement.removeAttribute(this.options.referenceAttribute);
+
+      oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
+      this.cleanReferenceMap();
+    }
+  }, {
+    key: 'reduceAdditiveMutations',
+    value: function reduceAdditiveMutations(liveElement) {
+      var _this4 = this;
+
+      (0, _anodum.traverseNode)(liveElement, function (lNode) {
+        var referenceId = _this4.getReferenceId(lNode);
+        var mutations = _this4.additiveMutations.filter(function (mutation) {
+          return mutation.target === lNode;
+        });
+        mutations.forEach(function (mutation) {
+          var index = _this4.additiveMutations.indexOf(mutation);
+
+          switch (mutation.type) {
+            case 'attributes':
+              {
+                var attributeName = mutation.attributeName,
+                    oldValue = mutation.oldValue;
+
+                if (oldValue) {
+                  _this4.setReferenceAttribute(referenceId, attributeName, oldValue);
+                } else {
+                  _this4.removeReferenceAttribute(referenceId, attributeName);
+                }
+                break;
+              }
+            case 'childList':
+              {
+                break;
+              }
+            default:
+              {
+                break;
+              }
+          }
+
+          _this4.additiveMutations.splice(index, 1);
+        });
+      });
+    }
+  }, {
+    key: 'addAdditiveMutations',
+    value: function addAdditiveMutations(mutations) {
+      this.additiveMutations = this.additiveMutations.concat((0, _squashMutations2.default)(mutations));
     }
   }, {
     key: 'conductAttributeMutation',
@@ -524,52 +590,14 @@ var MutationDriver = function () {
       }
 
       var liveNode = mutation.target;
-      var liveNodeId = this.getReferenceId(liveNode);
+      var referenceId = this.getReferenceId(liveNode);
       var attribute = mutation.attributeName;
 
       if (liveNode.hasAttribute(attribute)) {
         var value = liveNode.getAttribute(attribute);
-        this.setReferenceAttribute(liveNodeId, attribute, value);
+        this.setReferenceAttribute(referenceId, attribute, value);
       } else {
-        this.removeReferenceAttribute(liveNodeId, attribute);
-      }
-    }
-  }, {
-    key: 'conductChildrenRemovalMutation',
-    value: function conductChildrenRemovalMutation(mutation) {
-      if (mutation.type !== 'childList') {
-        throw new TypeError('mutation is not an attribute mutation');
-      }
-
-      var liveNodes = mutation.removedNodes;
-
-      for (var i = 0; i < liveNodes.length; i += 1) {
-        var liveNode = liveNodes[i];
-        var liveNodeId = this.getReferenceId(liveNode);
-        this.removeReference(liveNodeId);
-      }
-    }
-  }, {
-    key: 'conductChildrenInsertionMutation',
-    value: function conductChildrenInsertionMutation(mutation) {
-      if (mutation.type !== 'childList') {
-        throw new TypeError('mutation is not an attribute mutation');
-      }
-
-      var liveNodes = mutation.addedNodes;
-
-      var container = mutation.target;
-      var containerId = this.getReferenceId(container);
-
-      for (var i = 0; i < liveNodes.length; i += 1) {
-        var liveNode = liveNodes[i];
-        var liveSiblingId = this.getNextReferenceId(liveNode);
-
-        if (liveSiblingId) {
-          this.insertReferenceBefore(liveNode, liveSiblingId);
-        } else {
-          this.appendReference(liveNode, containerId);
-        }
+        this.removeReferenceAttribute(referenceId, attribute);
       }
     }
   }, {
@@ -579,13 +607,10 @@ var MutationDriver = function () {
         throw new TypeError('mutation is not an attribute mutation');
       }
 
-      if (mutation.removedNodes) {
-        this.conductChildrenRemovalMutation(mutation);
-      }
+      var liveNode = mutation.target;
+      var referenceId = this.getReferenceId(liveNode);
 
-      if (mutation.addedNodes) {
-        this.conductChildrenInsertionMutation(mutation);
-      }
+      this.replaceReference(liveNode, referenceId);
     }
   }, {
     key: 'conductMutation',
@@ -609,11 +634,11 @@ var MutationDriver = function () {
       }
     }
   }, {
-    key: 'conductMutations',
-    value: function conductMutations(mutations) {
-      var conductedMutations = (0, _squashMutations2.default)(mutations);
-      conductedMutations.forEach(this.conductMutation);
-      this.lastConductedMutations = conductedMutations;
+    key: 'conductTransaction',
+    value: function conductTransaction(mutations) {
+      var transaction = (0, _squashMutations2.default)(mutations);
+      transaction.forEach(this.conductMutation);
+      this.lastTransaction = transaction;
     }
   }]);
 

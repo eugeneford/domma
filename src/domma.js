@@ -2,14 +2,20 @@ import MutationDriver from './mutation-driver';
 
 export default class Domma {
   constructor(options) {
-    this.driver = new MutationDriver(options);
-    this.observer = new MutationObserver(this.driver.conductMutations);
     this.config = {
       childList: true,
       attributes: true,
       attributeOldValue: true,
       subtree: true,
     };
+
+    this.driver = new MutationDriver(options);
+    this.transactionStatus = 'resolved';
+    this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
+    this.mutationObserver = new MutationObserver((mutations) => {
+      if (this.isTransactionPending()) return;
+      this.driver.addAdditiveMutations(mutations);
+    });
   }
 
   connectStaticDocument(staticDOM) {
@@ -25,11 +31,21 @@ export default class Domma {
 
     const liveDOM = this.driver.composeLiveReference(staticDOM);
 
-    this.driver.connectLiveDocument(liveDOM);
+    this.connectLiveDocument(liveDOM);
   }
 
   connectLiveDocument(liveDOM) {
+    this.mutationObserver.disconnect();
     this.driver.connectLiveDocument(liveDOM);
+    this.mutationObserver.observe(liveDOM, this.config);
+  }
+
+  isTransactionResolved() {
+    return this.transactionStatus === 'resolved';
+  }
+
+  isTransactionPending() {
+    return this.transactionStatus === 'pending';
   }
 
   async conductTransaction(transaction) {
@@ -39,10 +55,12 @@ export default class Domma {
       throw new ReferenceError('live document is not connected');
     }
 
-    await this.observer.observe(liveDOM, this.config);
+    this.transactionStatus = await 'pending';
+    await this.transactionObserver.observe(liveDOM, this.config);
     await transaction(liveDOM);
-    await this.observer.disconnect();
+    await this.transactionObserver.disconnect();
+    this.transactionStatus = await 'resolved';
 
-    return this.driver.getLastConductedMutations();
+    return this.driver.getLastTransaction();
   }
 }

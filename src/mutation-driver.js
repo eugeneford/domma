@@ -3,10 +3,6 @@ import {
   isNode,
   isDocumentNode,
   isElementNode,
-  isCommentNode,
-  isTextNode,
-  isNonEmptyTextNode,
-  isChildOfTag,
   getNodeByTreePath,
   getTreePathOfNode,
   traverseNode,
@@ -23,21 +19,22 @@ export default class MutationDriver {
       ...options,
     };
 
-    this.map = {};
-    this.lastConductedMutations = undefined;
-    this.conductMutations = this.conductMutations.bind(this);
+    this.referenceMap = {};
+    this.additiveMutations = [];
+    this.lastTransaction = undefined;
+    this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
   }
 
   cleanReferenceMap() {
-    const records = Object.keys(this.map);
+    const records = Object.keys(this.referenceMap);
     records.forEach((id) => {
-      const { staticNode } = this.map[id];
+      const { staticNode } = this.referenceMap[id];
       let node = staticNode;
 
       while (node && !isDocumentNode(node)) {
         if (!node.parentNode) {
-          delete this.map[id];
+          delete this.referenceMap[id];
           return;
         }
         node = node.parentNode;
@@ -61,39 +58,31 @@ export default class MutationDriver {
     this.liveDOM = liveDOM;
   }
 
-  saveReference(liveNode, staticNode) {
-    const id = generateUuid();
-
-    if (isElementNode(liveNode)) {
-      liveNode.setAttribute(this.options.referenceAttribute, id);
-    } else if (isNonEmptyTextNode(liveNode)) {
-      const anchor = `${this.options.referenceAttribute}:${id}`;
-      const comment = document.createComment(anchor);
-      liveNode.parentNode.insertBefore(comment, liveNode);
-    }
-    this.map[id] = { staticNode };
+  saveReference(liveNode, staticNode, id = generateUuid()) {
+    liveNode.setAttribute(this.options.referenceAttribute, id);
+    this.referenceMap[id] = { staticNode };
   }
 
-  composeStaticReference(liveNode) {
+  composeStaticReference(liveNode, id) {
     const staticNode = liveNode.cloneNode(true);
     const rootPath = getTreePathOfNode(liveNode);
 
     traverseNode(liveNode, (lNode, path) => {
-      if (isCommentNode(lNode)) return;
-      if (isElementNode(lNode) && isChildOfTag(lNode, 'svg')) return;
+      if (!isElementNode(lNode)) return;
 
       path.splice(0, rootPath.length, 0);
 
       const sNode = getNodeByTreePath(staticNode, path);
+      const refId = liveNode === lNode ? id : undefined;
 
-      this.saveReference(lNode, sNode);
+      this.saveReference(lNode, sNode, refId);
       this.options.forEachReferenceSave(lNode, sNode);
     }, true);
 
     return staticNode;
   }
 
-  composeLiveReference(staticNode) {
+  composeLiveReference(staticNode, id) {
     if (!isDocumentNode(staticNode) && !isElementNode(staticNode)) {
       throw new TypeError('staticNode is not neither Document nor Element');
     }
@@ -102,12 +91,12 @@ export default class MutationDriver {
     const liveNode = staticNode.cloneNode(true);
 
     traverseNode(liveNode, (lNode, path) => {
-      if (isCommentNode(lNode)) return;
-      if (isElementNode(lNode) && isChildOfTag(lNode, 'svg')) return;
+      if (!isElementNode(lNode)) return;
 
       const sNode = getNodeByTreePath(staticRoot, path);
+      const refId = liveNode === lNode ? id : undefined;
 
-      this.saveReference(lNode, sNode);
+      this.saveReference(lNode, sNode, refId);
       this.options.forEachReferenceSave(lNode, sNode);
     }, true);
 
@@ -122,25 +111,19 @@ export default class MutationDriver {
     return this.liveDOM;
   }
 
-  getLastConductedMutations() {
-    return this.lastConductedMutations;
+  getLastTransaction() {
+    return this.lastTransaction;
   }
 
   isReferenceId(id) {
-    return Object.prototype.hasOwnProperty.call(this.map, id);
+    return Object.prototype.hasOwnProperty.call(this.referenceMap, id);
   }
 
   getReferenceId(liveNode) {
-    if (!isElementNode(liveNode) && !isTextNode(liveNode)) return undefined;
+    if (!isElementNode(liveNode)) return undefined;
 
     if (liveNode.ownerDocument !== this.liveDOM) {
       throw new ReferenceError('liveNode doesn\'t belong to connected live document');
-    }
-
-    if (isTextNode(liveNode)) {
-      if (!isCommentNode(liveNode.previousSibling)) return undefined;
-      const anchor = liveNode.previousSibling.nodeValue.split(':');
-      return anchor[0] === this.options.referenceAttribute ? anchor[1] : undefined;
     }
 
     return liveNode.getAttribute(this.options.referenceAttribute);
@@ -148,11 +131,11 @@ export default class MutationDriver {
 
   getPreviousReferenceId(liveNode) {
     let referenceId;
-    let node = liveNode.previousSibling;
+    let node = liveNode.previousElementSibling;
     while (node) {
       referenceId = this.getReferenceId(node);
       if (referenceId) break;
-      node = node.previousSibling;
+      node = node.previousElementSibling;
     }
 
     return referenceId;
@@ -160,11 +143,11 @@ export default class MutationDriver {
 
   getNextReferenceId(liveNode) {
     let referenceId;
-    let node = liveNode.nextSibling;
+    let node = liveNode.nextElementSibling;
     while (node) {
       referenceId = this.getReferenceId(node);
       if (referenceId) break;
-      node = node.nextSibling;
+      node = node.nextElementSibling;
     }
 
     return referenceId;
@@ -172,24 +155,24 @@ export default class MutationDriver {
 
   getParentReferenceId(liveNode) {
     let referenceId;
-    let node = liveNode.parentNode;
+    let node = liveNode.parentElement;
     while (node) {
       referenceId = this.getReferenceId(node);
       if (referenceId) break;
-      node = node.parentNode;
+      node = node.parentElement;
     }
 
     return referenceId;
   }
 
   hasReference(liveNode) {
-    return Object.prototype.hasOwnProperty.call(this.map, this.getReferenceId(liveNode));
+    return Object.prototype.hasOwnProperty.call(this.referenceMap, this.getReferenceId(liveNode));
   }
 
   getReference(liveNode) {
     const id = this.getReferenceId(liveNode);
     if (!this.isReferenceId(id)) return undefined;
-    return this.map[id].staticNode;
+    return this.referenceMap[id].staticNode;
   }
 
   setReferenceAttribute(id, attr, value) {
@@ -197,12 +180,7 @@ export default class MutationDriver {
       throw new ReferenceError('reference with specified id is not found');
     }
 
-    const { staticNode } = this.map[id];
-
-    if (!isElementNode(staticNode)) {
-      throw new TypeError('reference is not an Element');
-    }
-
+    const { staticNode } = this.referenceMap[id];
     staticNode.setAttribute(attr, value);
   }
 
@@ -211,12 +189,7 @@ export default class MutationDriver {
       throw new ReferenceError('reference with specified id is not found');
     }
 
-    const { staticNode } = this.map[id];
-
-    if (!isElementNode(staticNode)) {
-      throw new TypeError('reference is not an Element');
-    }
-
+    const { staticNode } = this.referenceMap[id];
     return staticNode.hasAttribute(attr);
   }
 
@@ -225,35 +198,30 @@ export default class MutationDriver {
       throw new ReferenceError('reference with specified id is not found');
     }
 
-    const { staticNode } = this.map[id];
-
-    if (!isElementNode(staticNode)) {
-      throw new TypeError('reference is not an Element');
-    }
-
+    const { staticNode } = this.referenceMap[id];
     staticNode.removeAttribute(attr);
   }
 
   removeReference(id) {
     if (!this.isReferenceId(id)) {
-      throw new ReferenceError('reference with specified id is not find');
+      throw new ReferenceError('reference with specified id is not found');
     }
 
-    const { staticNode } = this.map[id];
+    const { staticNode } = this.referenceMap[id];
     staticNode.parentNode.removeChild(staticNode);
     this.cleanReferenceMap();
   }
 
   appendReference(liveNode, containerId) {
     if (!this.isReferenceId(containerId)) {
-      throw new ReferenceError('reference with specified id is not find');
+      throw new ReferenceError('reference with specified id is not found');
     }
 
     if (!isNode(liveNode)) {
       throw new TypeError('liveNode is not a Node');
     }
 
-    const staticContainer = this.map[containerId].staticNode;
+    const staticContainer = this.referenceMap[containerId].staticNode;
     const staticNode = this.composeStaticReference(liveNode);
 
     staticContainer.appendChild(staticNode);
@@ -261,17 +229,67 @@ export default class MutationDriver {
 
   insertReferenceBefore(liveNode, siblingId) {
     if (!this.isReferenceId(siblingId)) {
-      throw new ReferenceError('reference with specified id is not find');
+      throw new ReferenceError('reference with specified id is not found');
     }
 
     if (!isNode(liveNode)) {
       throw new TypeError('liveNode is not a Node');
     }
 
-    const siblingNode = this.map[siblingId].staticNode;
+    const siblingNode = this.referenceMap[siblingId].staticNode;
     const staticNode = this.composeStaticReference(liveNode);
 
     siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+  }
+
+  replaceReference(liveNode, referenceId) {
+    if (!this.isReferenceId(referenceId)) {
+      throw new ReferenceError('reference with specified id is not found');
+    }
+
+    const oldStaticElement = this.referenceMap[referenceId].staticNode;
+    const newStaticElement = this.composeStaticReference(liveNode);
+
+    this.reduceAdditiveMutations(liveNode);
+
+    newStaticElement.removeAttribute(this.options.referenceAttribute);
+
+    oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
+    this.cleanReferenceMap();
+  }
+
+  reduceAdditiveMutations(liveElement) {
+    traverseNode(liveElement, (lNode) => {
+      const referenceId = this.getReferenceId(lNode);
+      const mutations = this.additiveMutations.filter(mutation => mutation.target === lNode);
+      mutations.forEach((mutation) => {
+        const index = this.additiveMutations.indexOf(mutation);
+
+        switch (mutation.type) {
+          case 'attributes': {
+            const { attributeName, oldValue } = mutation;
+            if (oldValue) {
+              this.setReferenceAttribute(referenceId, attributeName, oldValue);
+            } else {
+              this.removeReferenceAttribute(referenceId, attributeName);
+            }
+            break;
+          }
+          case 'childList': {
+            break;
+          }
+          default: {
+            break;
+          }
+        }
+
+        this.additiveMutations.splice(index, 1);
+      });
+    });
+  }
+
+  addAdditiveMutations(mutations) {
+    this.additiveMutations = this.additiveMutations.concat(squashMutations(mutations));
   }
 
   conductAttributeMutation(mutation) {
@@ -280,50 +298,14 @@ export default class MutationDriver {
     }
 
     const liveNode = mutation.target;
-    const liveNodeId = this.getReferenceId(liveNode);
+    const referenceId = this.getReferenceId(liveNode);
     const attribute = mutation.attributeName;
 
     if (liveNode.hasAttribute(attribute)) {
       const value = liveNode.getAttribute(attribute);
-      this.setReferenceAttribute(liveNodeId, attribute, value);
+      this.setReferenceAttribute(referenceId, attribute, value);
     } else {
-      this.removeReferenceAttribute(liveNodeId, attribute);
-    }
-  }
-
-  conductChildrenRemovalMutation(mutation) {
-    if (mutation.type !== 'childList') {
-      throw new TypeError('mutation is not an attribute mutation');
-    }
-
-    const liveNodes = mutation.removedNodes;
-
-    for (let i = 0; i < liveNodes.length; i += 1) {
-      const liveNode = liveNodes[i];
-      const liveNodeId = this.getReferenceId(liveNode);
-      this.removeReference(liveNodeId);
-    }
-  }
-
-  conductChildrenInsertionMutation(mutation) {
-    if (mutation.type !== 'childList') {
-      throw new TypeError('mutation is not an attribute mutation');
-    }
-
-    const liveNodes = mutation.addedNodes;
-
-    const container = mutation.target;
-    const containerId = this.getReferenceId(container);
-
-    for (let i = 0; i < liveNodes.length; i += 1) {
-      const liveNode = liveNodes[i];
-      const liveSiblingId = this.getNextReferenceId(liveNode);
-
-      if (liveSiblingId) {
-        this.insertReferenceBefore(liveNode, liveSiblingId);
-      } else {
-        this.appendReference(liveNode, containerId);
-      }
+      this.removeReferenceAttribute(referenceId, attribute);
     }
   }
 
@@ -332,13 +314,10 @@ export default class MutationDriver {
       throw new TypeError('mutation is not an attribute mutation');
     }
 
-    if (mutation.removedNodes) {
-      this.conductChildrenRemovalMutation(mutation);
-    }
+    const liveNode = mutation.target;
+    const referenceId = this.getReferenceId(liveNode);
 
-    if (mutation.addedNodes) {
-      this.conductChildrenInsertionMutation(mutation);
-    }
+    this.replaceReference(liveNode, referenceId);
   }
 
   conductMutation(mutation) {
@@ -358,9 +337,9 @@ export default class MutationDriver {
     }
   }
 
-  conductMutations(mutations) {
-    const conductedMutations = squashMutations(mutations);
-    conductedMutations.forEach(this.conductMutation);
-    this.lastConductedMutations = conductedMutations;
+  conductTransaction(mutations) {
+    const transaction = squashMutations(mutations);
+    transaction.forEach(this.conductMutation);
+    this.lastTransaction = transaction;
   }
 }
