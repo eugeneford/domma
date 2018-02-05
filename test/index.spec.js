@@ -1,7 +1,7 @@
-import Domma from '../src/index';
+import domma from '../src/domma';
 
-describe('Domma', ()=>{
+describe('domma', ()=>{
   it('is defined', ()=>{
-    expect(Domma).toBeDefined();
+    expect(domma).toBeDefined();
   })
 });
