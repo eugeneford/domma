@@ -667,6 +667,14 @@ var MutationDriver = function () {
       }
     }
   }, {
+    key: 'conductCharacterDataMutation',
+    value: function conductCharacterDataMutation(mutation) {
+      var liveNode = mutation.target.parentNode;
+      var referenceId = this.getReferenceId(liveNode);
+      this.reduceAdditiveMutationsOfNode(mutation.target, [_mutationTypes2.default.characterData]);
+      this.replaceReference(liveNode, referenceId);
+    }
+  }, {
     key: 'conductChildListMutation',
     value: function conductChildListMutation(mutation) {
       var liveNode = mutation.target;
@@ -687,15 +695,18 @@ var MutationDriver = function () {
   }, {
     key: 'conductMutation',
     value: function conductMutation(mutation) {
-      if (!this.hasReference(mutation.target)) return;
       switch (mutation.type) {
         case _mutationTypes2.default.attributes:
+          if (!this.hasReference(mutation.target)) return;
           this.conductAttributeMutation(mutation);
           break;
-        case _mutationTypes2.default.childList:
-          this.conductChildListMutation(mutation);
+        case _mutationTypes2.default.characterData:
+          if (!this.hasReference(mutation.target.parentNode)) return;
+          this.conductCharacterDataMutation(mutation);
           break;
         default:
+          if (!this.hasReference(mutation.target)) return;
+          this.conductChildListMutation(mutation);
           break;
       }
     }
