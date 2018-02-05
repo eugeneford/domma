@@ -113,6 +113,8 @@ var Domma = function () {
       childList: true,
       attributes: true,
       attributeOldValue: true,
+      characterData: true,
+      characterDataOldValue: true,
       subtree: true
     };
 
@@ -245,6 +247,10 @@ var _generateUuid2 = _interopRequireDefault(_generateUuid);
 
 var _anodum = __webpack_require__(4);
 
+var _mutationTypes = __webpack_require__(7);
+
+var _mutationTypes2 = _interopRequireDefault(_mutationTypes);
+
 var _squashMutations = __webpack_require__(5);
 
 var _squashMutations2 = _interopRequireDefault(_squashMutations);
@@ -267,6 +273,7 @@ var MutationDriver = function () {
     this.lastTransaction = undefined;
     this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
+    this.reduceAdditiveMutationsOfNode = this.reduceAdditiveMutationsOfNode.bind(this);
   }
 
   _createClass(MutationDriver, [{
@@ -492,7 +499,7 @@ var MutationDriver = function () {
     key: 'appendReference',
     value: function appendReference(liveNode, containerId) {
       if (!this.isReferenceId(containerId)) {
-        throw new ReferenceError('reference with specified id is not found');
+        throw new ReferenceError('reference with specified containerId is not found');
       }
 
       if (!(0, _anodum.isNode)(liveNode)) {
@@ -508,7 +515,7 @@ var MutationDriver = function () {
     key: 'insertReferenceBefore',
     value: function insertReferenceBefore(liveNode, siblingId) {
       if (!this.isReferenceId(siblingId)) {
-        throw new ReferenceError('reference with specified id is not found');
+        throw new ReferenceError('reference with specified siblingId is not found');
       }
 
       if (!(0, _anodum.isNode)(liveNode)) {
@@ -524,47 +531,81 @@ var MutationDriver = function () {
     key: 'replaceReference',
     value: function replaceReference(liveNode, referenceId) {
       if (!this.isReferenceId(referenceId)) {
-        throw new ReferenceError('reference with specified id is not found');
+        throw new ReferenceError('reference with specified referenceId is not found');
       }
 
       var oldStaticElement = this.referenceMap[referenceId].staticNode;
-      var newStaticElement = this.composeStaticReference(liveNode);
-
-      this.reduceAdditiveMutations(liveNode);
-
-      newStaticElement.removeAttribute(this.options.referenceAttribute);
+      var newStaticElement = this.composeStaticReference(liveNode, referenceId);
 
       oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
-      this.cleanReferenceMap();
+      this.ejectMutationsFromReferenceOfNode(liveNode);
     }
   }, {
-    key: 'reduceAdditiveMutations',
-    value: function reduceAdditiveMutations(liveElement) {
+    key: 'ejectMutationsFromReferenceOfNode',
+    value: function ejectMutationsFromReferenceOfNode(liveElement) {
       var _this4 = this;
 
       (0, _anodum.traverseNode)(liveElement, function (lNode) {
-        var referenceId = _this4.getReferenceId(lNode);
-        var mutations = _this4.additiveMutations.filter(function (mutation) {
-          return mutation.target === lNode;
-        });
-        mutations.forEach(function (mutation) {
-          var index = _this4.additiveMutations.indexOf(mutation);
+        var containerId = _this4.getReferenceId(lNode);
+        var containerNode = _this4.getReference(lNode);
+        var mutations = _this4.getAdditiveMutationsOfNode(lNode);
 
+        if ((0, _anodum.isElementNode)(containerNode)) {
+          containerNode.removeAttribute(_this4.options.referenceAttribute);
+        }
+
+        mutations.forEach(function (mutation) {
           switch (mutation.type) {
-            case 'attributes':
+            case _mutationTypes2.default.attributes:
               {
                 var attributeName = mutation.attributeName,
                     oldValue = mutation.oldValue;
 
                 if (oldValue) {
-                  _this4.setReferenceAttribute(referenceId, attributeName, oldValue);
+                  _this4.setReferenceAttribute(containerId, attributeName, oldValue);
                 } else {
-                  _this4.removeReferenceAttribute(referenceId, attributeName);
+                  _this4.removeReferenceAttribute(containerId, attributeName);
                 }
                 break;
               }
-            case 'childList':
+            case _mutationTypes2.default.childList:
               {
+                var addedNodes = mutation.addedNodes,
+                    removedNodes = mutation.removedNodes,
+                    nextSibling = mutation.nextSibling,
+                    previousSibling = mutation.previousSibling;
+
+
+                addedNodes.forEach(function (addedLiveNode) {
+                  if ((0, _anodum.isTextNode)(addedLiveNode)) {
+                    var liveList = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
+                    var liveIndex = liveList.indexOf(addedLiveNode);
+                    var staticNode = containerNode.childNodes[liveIndex];
+                    containerNode.removeChild(staticNode);
+                  }
+
+                  var id = _this4.getReferenceId(addedLiveNode);
+                  if (!_this4.isReferenceId(id)) return;
+                  _this4.removeReference(id);
+                  addedLiveNode.removeAttribute(_this4.options.referenceAttribute);
+                });
+
+                removedNodes.forEach(function (removedLiveNode) {
+                  if ((0, _anodum.isTextNode)(removedLiveNode)) {
+                    var textMutations = _this4.getAdditiveMutationsOfNode(removedLiveNode);
+                    var staticNode = removedLiveNode.cloneNode(true);
+
+                    textMutations.forEach(function (textMutation) {
+                      staticNode.nodeValue = textMutation.oldValue;
+                    });
+
+                    if (containerNode.firstChild) {
+                      containerNode.insertBefore(staticNode, containerNode.firstChild);
+                    } else {
+                      containerNode.appendChild(staticNode, containerNode.firstChild);
+                    }
+                  }
+                });
                 break;
               }
             default:
@@ -572,23 +613,48 @@ var MutationDriver = function () {
                 break;
               }
           }
-
-          _this4.additiveMutations.splice(index, 1);
         });
       });
     }
   }, {
     key: 'addAdditiveMutations',
     value: function addAdditiveMutations(mutations) {
-      this.additiveMutations = this.additiveMutations.concat((0, _squashMutations2.default)(mutations));
+      this.additiveMutations = this.additiveMutations.concat(mutations);
+    }
+  }, {
+    key: 'reduceAdditiveMutationsOfNode',
+    value: function reduceAdditiveMutationsOfNode(liveNode) {
+      var _this5 = this;
+
+      var types = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _mutationTypes2.default.all;
+
+      var additiveMutations = this.getAdditiveMutationsOfNode(liveNode, types);
+
+      additiveMutations.forEach(function (mutation) {
+        var index = _this5.additiveMutations.indexOf(mutation);
+        _this5.additiveMutations.splice(index, 1);
+        mutation.addedNodes.forEach(function (node) {
+          return _this5.reduceAdditiveMutationsOfNode(node);
+        });
+        mutation.removedNodes.forEach(function (node) {
+          return _this5.reduceAdditiveMutationsOfNode(node);
+        });
+      });
+    }
+  }, {
+    key: 'getAdditiveMutationsOfNode',
+    value: function getAdditiveMutationsOfNode(liveNode) {
+      var types = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _mutationTypes2.default.all;
+
+      return this.additiveMutations.filter(function (mutation) {
+        var sameTarget = mutation.target === liveNode;
+        var validType = types.indexOf(mutation.type) > -1;
+        return sameTarget && validType;
+      });
     }
   }, {
     key: 'conductAttributeMutation',
     value: function conductAttributeMutation(mutation) {
-      if (mutation.type !== 'attributes') {
-        throw new TypeError('mutation is not an attribute mutation');
-      }
-
       var liveNode = mutation.target;
       var referenceId = this.getReferenceId(liveNode);
       var attribute = mutation.attributeName;
@@ -603,12 +669,18 @@ var MutationDriver = function () {
   }, {
     key: 'conductChildListMutation',
     value: function conductChildListMutation(mutation) {
-      if (mutation.type !== 'childList') {
-        throw new TypeError('mutation is not an attribute mutation');
-      }
-
       var liveNode = mutation.target;
       var referenceId = this.getReferenceId(liveNode);
+      var addedNodes = mutation.addedNodes,
+          removedNodes = mutation.removedNodes,
+          nextSibling = mutation.nextSibling,
+          previousSibling = mutation.previousSibling;
+
+      // for target.innerHTML or target.replacedChild
+
+      if (addedNodes.length && removedNodes.length && !nextSibling && !previousSibling) {
+        this.reduceAdditiveMutationsOfNode(liveNode, [_mutationTypes2.default.childList]);
+      }
 
       this.replaceReference(liveNode, referenceId);
     }
@@ -617,20 +689,14 @@ var MutationDriver = function () {
     value: function conductMutation(mutation) {
       if (!this.hasReference(mutation.target)) return;
       switch (mutation.type) {
-        case 'attributes':
-          {
-            this.conductAttributeMutation(mutation);
-            break;
-          }
-        case 'childList':
-          {
-            this.conductChildListMutation(mutation);
-            break;
-          }
+        case _mutationTypes2.default.attributes:
+          this.conductAttributeMutation(mutation);
+          break;
+        case _mutationTypes2.default.childList:
+          this.conductChildListMutation(mutation);
+          break;
         default:
-          {
-            break;
-          }
+          break;
       }
     }
   }, {
@@ -703,12 +769,30 @@ exports.default = function (rawMutations) {
         }
       default:
         {
-          mutations.push(rawMutation);
+          mutations.unshift(rawMutation);
         }
     }
   });
 
   return mutations.reverse();
+};
+
+/***/ }),
+/* 6 */,
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = {
+  all: ['childList', 'attributes', 'characterData'],
+  characterData: 'characterData',
+  attributes: 'attributes',
+  childList: 'childList'
 };
 
 /***/ })

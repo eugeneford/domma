@@ -2,12 +2,14 @@ import generateUuid from 'generate-uuid';
 import {
   isNode,
   isDocumentNode,
+  isTextNode,
   isElementNode,
   getNodeByTreePath,
   getTreePathOfNode,
   traverseNode,
 } from 'anodum';
 
+import mutationTypes from './mutation-types';
 import squashMutations from './squash-mutations';
 
 export default class MutationDriver {
@@ -24,6 +26,7 @@ export default class MutationDriver {
     this.lastTransaction = undefined;
     this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
+    this.reduceAdditiveMutationsOfNode = this.reduceAdditiveMutationsOfNode.bind(this);
   }
 
   cleanReferenceMap() {
@@ -214,7 +217,7 @@ export default class MutationDriver {
 
   appendReference(liveNode, containerId) {
     if (!this.isReferenceId(containerId)) {
-      throw new ReferenceError('reference with specified id is not found');
+      throw new ReferenceError('reference with specified containerId is not found');
     }
 
     if (!isNode(liveNode)) {
@@ -229,7 +232,7 @@ export default class MutationDriver {
 
   insertReferenceBefore(liveNode, siblingId) {
     if (!this.isReferenceId(siblingId)) {
-      throw new ReferenceError('reference with specified id is not found');
+      throw new ReferenceError('reference with specified siblingId is not found');
     }
 
     if (!isNode(liveNode)) {
@@ -244,59 +247,109 @@ export default class MutationDriver {
 
   replaceReference(liveNode, referenceId) {
     if (!this.isReferenceId(referenceId)) {
-      throw new ReferenceError('reference with specified id is not found');
+      throw new ReferenceError('reference with specified referenceId is not found');
     }
 
     const oldStaticElement = this.referenceMap[referenceId].staticNode;
-    const newStaticElement = this.composeStaticReference(liveNode);
-
-    this.reduceAdditiveMutations(liveNode);
-
-    newStaticElement.removeAttribute(this.options.referenceAttribute);
+    const newStaticElement = this.composeStaticReference(liveNode, referenceId);
 
     oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
-    this.cleanReferenceMap();
+    this.ejectMutationsFromReferenceOfNode(liveNode);
   }
 
-  reduceAdditiveMutations(liveElement) {
+  ejectMutationsFromReferenceOfNode(liveElement) {
     traverseNode(liveElement, (lNode) => {
-      const referenceId = this.getReferenceId(lNode);
-      const mutations = this.additiveMutations.filter(mutation => mutation.target === lNode);
-      mutations.forEach((mutation) => {
-        const index = this.additiveMutations.indexOf(mutation);
+      const containerId = this.getReferenceId(lNode);
+      const containerNode = this.getReference(lNode);
+      const mutations = this.getAdditiveMutationsOfNode(lNode);
 
+      if (isElementNode(containerNode)) {
+        containerNode.removeAttribute(this.options.referenceAttribute);
+      }
+
+      mutations.forEach((mutation) => {
         switch (mutation.type) {
-          case 'attributes': {
+          case mutationTypes.attributes: {
             const { attributeName, oldValue } = mutation;
             if (oldValue) {
-              this.setReferenceAttribute(referenceId, attributeName, oldValue);
+              this.setReferenceAttribute(containerId, attributeName, oldValue);
             } else {
-              this.removeReferenceAttribute(referenceId, attributeName);
+              this.removeReferenceAttribute(containerId, attributeName);
             }
             break;
           }
-          case 'childList': {
+          case mutationTypes.childList: {
+            const {
+              addedNodes,
+              removedNodes,
+              nextSibling,
+              previousSibling,
+            } = mutation;
+
+            addedNodes.forEach((addedLiveNode) => {
+              if (isTextNode(addedLiveNode)) {
+                const liveList = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
+                const liveIndex = liveList.indexOf(addedLiveNode);
+                const staticNode = containerNode.childNodes[liveIndex];
+                containerNode.removeChild(staticNode);
+              }
+
+              const id = this.getReferenceId(addedLiveNode);
+              if (!this.isReferenceId(id)) return;
+              this.removeReference(id);
+              addedLiveNode.removeAttribute(this.options.referenceAttribute);
+            });
+
+            removedNodes.forEach((removedLiveNode) => {
+              if (isTextNode(removedLiveNode)) {
+                const textMutations = this.getAdditiveMutationsOfNode(removedLiveNode);
+                const staticNode = removedLiveNode.cloneNode(true);
+
+                textMutations.forEach((textMutation) => {
+                  staticNode.nodeValue = textMutation.oldValue;
+                });
+
+                if (containerNode.firstChild) {
+                  containerNode.insertBefore(staticNode, containerNode.firstChild);
+                } else {
+                  containerNode.appendChild(staticNode, containerNode.firstChild);
+                }
+              }
+            });
             break;
           }
           default: {
             break;
           }
         }
-
-        this.additiveMutations.splice(index, 1);
       });
     });
   }
 
   addAdditiveMutations(mutations) {
-    this.additiveMutations = this.additiveMutations.concat(squashMutations(mutations));
+    this.additiveMutations = this.additiveMutations.concat(mutations);
+  }
+
+  reduceAdditiveMutationsOfNode(liveNode, types = mutationTypes.all) {
+    const additiveMutations = this.getAdditiveMutationsOfNode(liveNode, types);
+
+    additiveMutations.forEach((mutation) => {
+      const index = this.additiveMutations.indexOf(mutation);
+      this.additiveMutations.splice(index, 1);
+      mutation.addedNodes.forEach(node => this.reduceAdditiveMutationsOfNode(node));
+      mutation.removedNodes.forEach(node => this.reduceAdditiveMutationsOfNode(node));
+    });
+  }
+
+  getAdditiveMutationsOfNode(liveNode, types = mutationTypes.all) {
+    return this.additiveMutations.filter((mutation) => {
+      const sameTarget = mutation.target === liveNode;
+      const validType = types.indexOf(mutation.type) > -1;
+      return sameTarget && validType;
+    });
   }
 
   conductAttributeMutation(mutation) {
-    if (mutation.type !== 'attributes') {
-      throw new TypeError('mutation is not an attribute mutation');
-    }
-
     const liveNode = mutation.target;
     const referenceId = this.getReferenceId(liveNode);
     const attribute = mutation.attributeName;
@@ -310,12 +363,19 @@ export default class MutationDriver {
   }
 
   conductChildListMutation(mutation) {
-    if (mutation.type !== 'childList') {
-      throw new TypeError('mutation is not an attribute mutation');
-    }
-
     const liveNode = mutation.target;
     const referenceId = this.getReferenceId(liveNode);
+    const {
+      addedNodes,
+      removedNodes,
+      nextSibling,
+      previousSibling,
+    } = mutation;
+
+    // for target.innerHTML or target.replacedChild
+    if (addedNodes.length && removedNodes.length && !nextSibling && !previousSibling) {
+      this.reduceAdditiveMutationsOfNode(liveNode, [mutationTypes.childList]);
+    }
 
     this.replaceReference(liveNode, referenceId);
   }
@@ -323,17 +383,14 @@ export default class MutationDriver {
   conductMutation(mutation) {
     if (!this.hasReference(mutation.target)) return;
     switch (mutation.type) {
-      case 'attributes': {
+      case mutationTypes.attributes:
         this.conductAttributeMutation(mutation);
         break;
-      }
-      case 'childList': {
+      case mutationTypes.childList:
         this.conductChildListMutation(mutation);
         break;
-      }
-      default: {
+      default:
         break;
-      }
     }
   }
 

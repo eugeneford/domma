@@ -6,6 +6,8 @@ export default class Domma {
       childList: true,
       attributes: true,
       attributeOldValue: true,
+      characterData: true,
+      characterDataOldValue: true,
       subtree: true,
     };
 

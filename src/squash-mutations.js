@@ -14,7 +14,7 @@ export default function (rawMutations) {
         break;
       }
       default: {
-        mutations.push(rawMutation);
+        mutations.unshift(rawMutation);
       }
     }
   });
