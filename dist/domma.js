@@ -141,7 +141,7 @@ var Domma = function () {
         throw new ReferenceError('static document is not connected');
       }
 
-      var liveDOM = this.driver.composeLiveReference(staticDOM);
+      var liveDOM = this.driver.referenceMap.composeLiveReference(staticDOM);
 
       this.connectLiveDocument(liveDOM);
     }
@@ -237,13 +237,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _generateUuid = __webpack_require__(3);
-
-var _generateUuid2 = _interopRequireDefault(_generateUuid);
 
 var _anodum = __webpack_require__(4);
 
@@ -255,6 +249,10 @@ var _squashMutations = __webpack_require__(5);
 
 var _squashMutations2 = _interopRequireDefault(_squashMutations);
 
+var _referenceMap = __webpack_require__(8);
+
+var _referenceMap2 = _interopRequireDefault(_referenceMap);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -263,40 +261,16 @@ var MutationDriver = function () {
   function MutationDriver(options) {
     _classCallCheck(this, MutationDriver);
 
-    this.options = _extends({
-      referenceAttribute: 'data-uuid',
-      forEachReferenceSave: function forEachReferenceSave() {}
-    }, options);
-
-    this.referenceMap = {};
     this.additiveMutations = [];
     this.lastTransaction = undefined;
+    this.referenceMap = new _referenceMap2.default(options);
+
     this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
     this.reduceAdditiveMutationsOfNode = this.reduceAdditiveMutationsOfNode.bind(this);
   }
 
   _createClass(MutationDriver, [{
-    key: 'cleanReferenceMap',
-    value: function cleanReferenceMap() {
-      var _this = this;
-
-      var records = Object.keys(this.referenceMap);
-      records.forEach(function (id) {
-        var staticNode = _this.referenceMap[id].staticNode;
-
-        var node = staticNode;
-
-        while (node && !(0, _anodum.isDocumentNode)(node)) {
-          if (!node.parentNode) {
-            delete _this.referenceMap[id];
-            return;
-          }
-          node = node.parentNode;
-        }
-      });
-    }
-  }, {
     key: 'connectStaticDocument',
     value: function connectStaticDocument(staticDOM) {
       if (!(0, _anodum.isDocumentNode)(staticDOM)) {
@@ -315,60 +289,6 @@ var MutationDriver = function () {
       this.liveDOM = liveDOM;
     }
   }, {
-    key: 'saveReference',
-    value: function saveReference(liveNode, staticNode) {
-      var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
-
-      liveNode.setAttribute(this.options.referenceAttribute, id);
-      this.referenceMap[id] = { staticNode: staticNode };
-    }
-  }, {
-    key: 'composeStaticReference',
-    value: function composeStaticReference(liveNode, id) {
-      var _this2 = this;
-
-      var staticNode = liveNode.cloneNode(true);
-      var rootPath = (0, _anodum.getTreePathOfNode)(liveNode);
-
-      (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
-        if (!(0, _anodum.isElementNode)(lNode)) return;
-
-        path.splice(0, rootPath.length, 0);
-
-        var sNode = (0, _anodum.getNodeByTreePath)(staticNode, path);
-        var refId = liveNode === lNode ? id : undefined;
-
-        _this2.saveReference(lNode, sNode, refId);
-        _this2.options.forEachReferenceSave(lNode, sNode);
-      }, true);
-
-      return staticNode;
-    }
-  }, {
-    key: 'composeLiveReference',
-    value: function composeLiveReference(staticNode, id) {
-      var _this3 = this;
-
-      if (!(0, _anodum.isDocumentNode)(staticNode) && !(0, _anodum.isElementNode)(staticNode)) {
-        throw new TypeError('staticNode is not neither Document nor Element');
-      }
-
-      var staticRoot = (0, _anodum.isDocumentNode)(staticNode) ? staticNode : staticNode.ownerDocument;
-      var liveNode = staticNode.cloneNode(true);
-
-      (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
-        if (!(0, _anodum.isElementNode)(lNode)) return;
-
-        var sNode = (0, _anodum.getNodeByTreePath)(staticRoot, path);
-        var refId = liveNode === lNode ? id : undefined;
-
-        _this3.saveReference(lNode, sNode, refId);
-        _this3.options.forEachReferenceSave(lNode, sNode);
-      }, true);
-
-      return liveNode;
-    }
-  }, {
     key: 'getStaticDocument',
     value: function getStaticDocument() {
       return this.staticDOM;
@@ -384,174 +304,17 @@ var MutationDriver = function () {
       return this.lastTransaction;
     }
   }, {
-    key: 'isReferenceId',
-    value: function isReferenceId(id) {
-      return Object.prototype.hasOwnProperty.call(this.referenceMap, id);
-    }
-  }, {
-    key: 'getReferenceId',
-    value: function getReferenceId(liveNode) {
-      if (!(0, _anodum.isElementNode)(liveNode)) return undefined;
-
-      if (liveNode.ownerDocument !== this.liveDOM) {
-        throw new ReferenceError('liveNode doesn\'t belong to connected live document');
-      }
-
-      return liveNode.getAttribute(this.options.referenceAttribute);
-    }
-  }, {
-    key: 'getPreviousReferenceId',
-    value: function getPreviousReferenceId(liveNode) {
-      var referenceId = void 0;
-      var node = liveNode.previousElementSibling;
-      while (node) {
-        referenceId = this.getReferenceId(node);
-        if (referenceId) break;
-        node = node.previousElementSibling;
-      }
-
-      return referenceId;
-    }
-  }, {
-    key: 'getNextReferenceId',
-    value: function getNextReferenceId(liveNode) {
-      var referenceId = void 0;
-      var node = liveNode.nextElementSibling;
-      while (node) {
-        referenceId = this.getReferenceId(node);
-        if (referenceId) break;
-        node = node.nextElementSibling;
-      }
-
-      return referenceId;
-    }
-  }, {
-    key: 'getParentReferenceId',
-    value: function getParentReferenceId(liveNode) {
-      var referenceId = void 0;
-      var node = liveNode.parentElement;
-      while (node) {
-        referenceId = this.getReferenceId(node);
-        if (referenceId) break;
-        node = node.parentElement;
-      }
-
-      return referenceId;
-    }
-  }, {
-    key: 'hasReference',
-    value: function hasReference(liveNode) {
-      return Object.prototype.hasOwnProperty.call(this.referenceMap, this.getReferenceId(liveNode));
-    }
-  }, {
-    key: 'getReference',
-    value: function getReference(liveNode) {
-      var id = this.getReferenceId(liveNode);
-      if (!this.isReferenceId(id)) return undefined;
-      return this.referenceMap[id].staticNode;
-    }
-  }, {
-    key: 'setReferenceAttribute',
-    value: function setReferenceAttribute(id, attr, value) {
-      if (!this.isReferenceId(id)) {
-        throw new ReferenceError('reference with specified id is not found');
-      }
-
-      var staticNode = this.referenceMap[id].staticNode;
-
-      staticNode.setAttribute(attr, value);
-    }
-  }, {
-    key: 'hasReferenceAttribute',
-    value: function hasReferenceAttribute(id, attr) {
-      if (!this.isReferenceId(id)) {
-        throw new ReferenceError('reference with specified id is not found');
-      }
-
-      var staticNode = this.referenceMap[id].staticNode;
-
-      return staticNode.hasAttribute(attr);
-    }
-  }, {
-    key: 'removeReferenceAttribute',
-    value: function removeReferenceAttribute(id, attr) {
-      if (!this.isReferenceId(id)) {
-        throw new ReferenceError('reference with specified id is not found');
-      }
-
-      var staticNode = this.referenceMap[id].staticNode;
-
-      staticNode.removeAttribute(attr);
-    }
-  }, {
-    key: 'removeReference',
-    value: function removeReference(id) {
-      if (!this.isReferenceId(id)) {
-        throw new ReferenceError('reference with specified id is not found');
-      }
-
-      var staticNode = this.referenceMap[id].staticNode;
-
-      staticNode.parentNode.removeChild(staticNode);
-      this.cleanReferenceMap();
-    }
-  }, {
-    key: 'appendReference',
-    value: function appendReference(liveNode, containerId) {
-      if (!this.isReferenceId(containerId)) {
-        throw new ReferenceError('reference with specified containerId is not found');
-      }
-
-      if (!(0, _anodum.isNode)(liveNode)) {
-        throw new TypeError('liveNode is not a Node');
-      }
-
-      var staticContainer = this.referenceMap[containerId].staticNode;
-      var staticNode = this.composeStaticReference(liveNode);
-
-      staticContainer.appendChild(staticNode);
-    }
-  }, {
-    key: 'insertReferenceBefore',
-    value: function insertReferenceBefore(liveNode, siblingId) {
-      if (!this.isReferenceId(siblingId)) {
-        throw new ReferenceError('reference with specified siblingId is not found');
-      }
-
-      if (!(0, _anodum.isNode)(liveNode)) {
-        throw new TypeError('liveNode is not a Node');
-      }
-
-      var siblingNode = this.referenceMap[siblingId].staticNode;
-      var staticNode = this.composeStaticReference(liveNode);
-
-      siblingNode.parentNode.insertBefore(staticNode, siblingNode);
-    }
-  }, {
-    key: 'replaceReference',
-    value: function replaceReference(liveNode, referenceId) {
-      if (!this.isReferenceId(referenceId)) {
-        throw new ReferenceError('reference with specified referenceId is not found');
-      }
-
-      var oldStaticElement = this.referenceMap[referenceId].staticNode;
-      var newStaticElement = this.composeStaticReference(liveNode, referenceId);
-
-      oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
-      this.ejectMutationsFromReferenceOfNode(liveNode);
-    }
-  }, {
     key: 'ejectMutationsFromReferenceOfNode',
     value: function ejectMutationsFromReferenceOfNode(liveElement) {
-      var _this4 = this;
+      var _this = this;
 
       (0, _anodum.traverseNode)(liveElement, function (lNode) {
-        var containerId = _this4.getReferenceId(lNode);
-        var containerNode = _this4.getReference(lNode);
-        var mutations = _this4.getAdditiveMutationsOfNode(lNode);
+        var containerId = _this.referenceMap.getReferenceId(lNode);
+        var containerNode = _this.referenceMap.getReference(lNode);
+        var mutations = _this.getAdditiveMutationsOfNode(lNode);
 
         if ((0, _anodum.isElementNode)(containerNode)) {
-          containerNode.removeAttribute(_this4.options.referenceAttribute);
+          containerNode.removeAttribute(_this.referenceMap.options.referenceAttribute);
         }
 
         mutations.forEach(function (mutation) {
@@ -562,9 +325,9 @@ var MutationDriver = function () {
                     oldValue = mutation.oldValue;
 
                 if (oldValue) {
-                  _this4.setReferenceAttribute(containerId, attributeName, oldValue);
+                  _this.referenceMap.setReferenceAttribute(containerId, attributeName, oldValue);
                 } else {
-                  _this4.removeReferenceAttribute(containerId, attributeName);
+                  _this.referenceMap.removeReferenceAttribute(containerId, attributeName);
                 }
                 break;
               }
@@ -584,15 +347,16 @@ var MutationDriver = function () {
                     containerNode.removeChild(staticNode);
                   }
 
-                  var id = _this4.getReferenceId(addedLiveNode);
-                  if (!_this4.isReferenceId(id)) return;
-                  _this4.removeReference(id);
-                  addedLiveNode.removeAttribute(_this4.options.referenceAttribute);
+                  var id = _this.referenceMap.getReferenceId(addedLiveNode);
+                  if (!_this.referenceMap.isReferenceId(id)) return;
+                  _this.referenceMap.removeReference(id);
+                  _this.referenceMap.flush();
+                  addedLiveNode.removeAttribute(_this.options.referenceAttribute);
                 });
 
                 removedNodes.forEach(function (removedLiveNode) {
                   if ((0, _anodum.isTextNode)(removedLiveNode)) {
-                    var textMutations = _this4.getAdditiveMutationsOfNode(removedLiveNode);
+                    var textMutations = _this.getAdditiveMutationsOfNode(removedLiveNode);
                     var staticNode = removedLiveNode.cloneNode(true);
 
                     textMutations.forEach(function (textMutation) {
@@ -624,20 +388,20 @@ var MutationDriver = function () {
   }, {
     key: 'reduceAdditiveMutationsOfNode',
     value: function reduceAdditiveMutationsOfNode(liveNode) {
-      var _this5 = this;
+      var _this2 = this;
 
       var types = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _mutationTypes2.default.all;
 
       var additiveMutations = this.getAdditiveMutationsOfNode(liveNode, types);
 
       additiveMutations.forEach(function (mutation) {
-        var index = _this5.additiveMutations.indexOf(mutation);
-        _this5.additiveMutations.splice(index, 1);
+        var index = _this2.additiveMutations.indexOf(mutation);
+        _this2.additiveMutations.splice(index, 1);
         mutation.addedNodes.forEach(function (node) {
-          return _this5.reduceAdditiveMutationsOfNode(node);
+          return _this2.reduceAdditiveMutationsOfNode(node);
         });
         mutation.removedNodes.forEach(function (node) {
-          return _this5.reduceAdditiveMutationsOfNode(node);
+          return _this2.reduceAdditiveMutationsOfNode(node);
         });
       });
     }
@@ -656,29 +420,30 @@ var MutationDriver = function () {
     key: 'conductAttributeMutation',
     value: function conductAttributeMutation(mutation) {
       var liveNode = mutation.target;
-      var referenceId = this.getReferenceId(liveNode);
+      var referenceId = this.referenceMap.getReferenceId(liveNode);
       var attribute = mutation.attributeName;
 
       if (liveNode.hasAttribute(attribute)) {
         var value = liveNode.getAttribute(attribute);
-        this.setReferenceAttribute(referenceId, attribute, value);
+        this.referenceMap.setReferenceAttribute(referenceId, attribute, value);
       } else {
-        this.removeReferenceAttribute(referenceId, attribute);
+        this.referenceMap.removeReferenceAttribute(referenceId, attribute);
       }
     }
   }, {
     key: 'conductCharacterDataMutation',
     value: function conductCharacterDataMutation(mutation) {
       var liveNode = mutation.target.parentNode;
-      var referenceId = this.getReferenceId(liveNode);
+      var referenceId = this.referenceMap.getReferenceId(liveNode);
       this.reduceAdditiveMutationsOfNode(mutation.target, [_mutationTypes2.default.characterData]);
-      this.replaceReference(liveNode, referenceId);
+      this.referenceMap.replaceReference(liveNode, referenceId);
+      this.ejectMutationsFromReferenceOfNode(liveNode);
     }
   }, {
     key: 'conductChildListMutation',
     value: function conductChildListMutation(mutation) {
       var liveNode = mutation.target;
-      var referenceId = this.getReferenceId(liveNode);
+      var referenceId = this.referenceMap.getReferenceId(liveNode);
       var addedNodes = mutation.addedNodes,
           removedNodes = mutation.removedNodes,
           nextSibling = mutation.nextSibling,
@@ -690,22 +455,23 @@ var MutationDriver = function () {
         this.reduceAdditiveMutationsOfNode(liveNode, [_mutationTypes2.default.childList]);
       }
 
-      this.replaceReference(liveNode, referenceId);
+      this.referenceMap.replaceReference(liveNode, referenceId);
+      this.ejectMutationsFromReferenceOfNode(liveNode);
     }
   }, {
     key: 'conductMutation',
     value: function conductMutation(mutation) {
       switch (mutation.type) {
         case _mutationTypes2.default.attributes:
-          if (!this.hasReference(mutation.target)) return;
+          if (!this.referenceMap.hasReference(mutation.target)) return;
           this.conductAttributeMutation(mutation);
           break;
         case _mutationTypes2.default.characterData:
-          if (!this.hasReference(mutation.target.parentNode)) return;
+          if (!this.referenceMap.hasReference(mutation.target.parentNode)) return;
           this.conductCharacterDataMutation(mutation);
           break;
         default:
-          if (!this.hasReference(mutation.target)) return;
+          if (!this.referenceMap.hasReference(mutation.target)) return;
           this.conductChildListMutation(mutation);
           break;
       }
@@ -805,6 +571,272 @@ exports.default = {
   attributes: 'attributes',
   childList: 'childList'
 };
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _generateUuid = __webpack_require__(3);
+
+var _generateUuid2 = _interopRequireDefault(_generateUuid);
+
+var _anodum = __webpack_require__(4);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var ReferenceMap = function () {
+  function ReferenceMap(options) {
+    _classCallCheck(this, ReferenceMap);
+
+    this.options = _extends({
+      referenceAttribute: 'data-uuid',
+      forEachReferenceSave: function forEachReferenceSave() {}
+    }, options);
+    this.map = {};
+  }
+
+  _createClass(ReferenceMap, [{
+    key: 'saveReference',
+    value: function saveReference(liveNode, staticNode) {
+      var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
+
+      liveNode.setAttribute(this.options.referenceAttribute, id);
+      this.map[id] = { staticNode: staticNode };
+    }
+  }, {
+    key: 'composeStaticReference',
+    value: function composeStaticReference(liveNode, id) {
+      var _this = this;
+
+      var staticNode = liveNode.cloneNode(true);
+      var rootPath = (0, _anodum.getTreePathOfNode)(liveNode);
+
+      (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
+        if (!(0, _anodum.isElementNode)(lNode)) return;
+
+        path.splice(0, rootPath.length, 0);
+
+        var sNode = (0, _anodum.getNodeByTreePath)(staticNode, path);
+        var refId = liveNode === lNode ? id : undefined;
+
+        _this.saveReference(lNode, sNode, refId);
+        _this.options.forEachReferenceSave(lNode, sNode);
+      }, true);
+
+      return staticNode;
+    }
+  }, {
+    key: 'composeLiveReference',
+    value: function composeLiveReference(staticNode, id) {
+      var _this2 = this;
+
+      if (!(0, _anodum.isDocumentNode)(staticNode) && !(0, _anodum.isElementNode)(staticNode)) {
+        throw new TypeError('staticNode is not neither Document nor Element');
+      }
+
+      var staticRoot = (0, _anodum.isDocumentNode)(staticNode) ? staticNode : staticNode.ownerDocument;
+      var liveNode = staticNode.cloneNode(true);
+
+      (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
+        if (!(0, _anodum.isElementNode)(lNode)) return;
+
+        var sNode = (0, _anodum.getNodeByTreePath)(staticRoot, path);
+        var refId = liveNode === lNode ? id : undefined;
+
+        _this2.saveReference(lNode, sNode, refId);
+        _this2.options.forEachReferenceSave(lNode, sNode);
+      }, true);
+
+      return liveNode;
+    }
+  }, {
+    key: 'isReferenceId',
+    value: function isReferenceId(id) {
+      return Object.prototype.hasOwnProperty.call(this.map, id);
+    }
+  }, {
+    key: 'getReferenceId',
+    value: function getReferenceId(liveNode) {
+      if (!(0, _anodum.isElementNode)(liveNode)) return undefined;
+      return liveNode.getAttribute(this.options.referenceAttribute);
+    }
+  }, {
+    key: 'getPreviousReferenceId',
+    value: function getPreviousReferenceId(liveNode) {
+      var referenceId = void 0;
+      var node = liveNode.previousElementSibling;
+      while (node) {
+        referenceId = this.getReferenceId(node);
+        if (referenceId) break;
+        node = node.previousElementSibling;
+      }
+
+      return referenceId;
+    }
+  }, {
+    key: 'getNextReferenceId',
+    value: function getNextReferenceId(liveNode) {
+      var referenceId = void 0;
+      var node = liveNode.nextElementSibling;
+      while (node) {
+        referenceId = this.getReferenceId(node);
+        if (referenceId) break;
+        node = node.nextElementSibling;
+      }
+
+      return referenceId;
+    }
+  }, {
+    key: 'getParentReferenceId',
+    value: function getParentReferenceId(liveNode) {
+      var referenceId = void 0;
+      var node = liveNode.parentElement;
+      while (node) {
+        referenceId = this.getReferenceId(node);
+        if (referenceId) break;
+        node = node.parentElement;
+      }
+
+      return referenceId;
+    }
+  }, {
+    key: 'hasReference',
+    value: function hasReference(liveNode) {
+      return this.isReferenceId(this.getReferenceId(liveNode));
+    }
+  }, {
+    key: 'getReference',
+    value: function getReference(liveNode) {
+      var id = this.getReferenceId(liveNode);
+      if (!this.isReferenceId(id)) return undefined;
+      return this.map[id].staticNode;
+    }
+  }, {
+    key: 'setReferenceAttribute',
+    value: function setReferenceAttribute(id, attr, value) {
+      if (!this.isReferenceId(id)) {
+        throw new ReferenceError('reference with specified id is not found');
+      }
+
+      var staticNode = this.map[id].staticNode;
+
+      staticNode.setAttribute(attr, value);
+    }
+  }, {
+    key: 'hasReferenceAttribute',
+    value: function hasReferenceAttribute(id, attr) {
+      if (!this.isReferenceId(id)) {
+        throw new ReferenceError('reference with specified id is not found');
+      }
+
+      var staticNode = this.map[id].staticNode;
+
+      return staticNode.hasAttribute(attr);
+    }
+  }, {
+    key: 'removeReferenceAttribute',
+    value: function removeReferenceAttribute(id, attr) {
+      if (!this.isReferenceId(id)) {
+        throw new ReferenceError('reference with specified id is not found');
+      }
+
+      var staticNode = this.map[id].staticNode;
+
+      staticNode.removeAttribute(attr);
+    }
+  }, {
+    key: 'removeReference',
+    value: function removeReference(id) {
+      if (!this.isReferenceId(id)) {
+        throw new ReferenceError('reference with specified id is not found');
+      }
+
+      var staticNode = this.map[id].staticNode;
+
+      return staticNode.parentNode.removeChild(staticNode);
+    }
+  }, {
+    key: 'appendReference',
+    value: function appendReference(liveNode, containerId) {
+      if (!this.isReferenceId(containerId)) {
+        throw new ReferenceError('reference with specified containerId is not found');
+      }
+
+      if (!(0, _anodum.isNode)(liveNode)) {
+        throw new TypeError('liveNode is not a Node');
+      }
+
+      var staticContainer = this.map[containerId].staticNode;
+      var staticNode = this.composeStaticReference(liveNode);
+
+      return staticContainer.appendChild(staticNode);
+    }
+  }, {
+    key: 'insertReferenceBefore',
+    value: function insertReferenceBefore(liveNode, siblingId) {
+      if (!this.isReferenceId(siblingId)) {
+        throw new ReferenceError('reference with specified siblingId is not found');
+      }
+
+      if (!(0, _anodum.isNode)(liveNode)) {
+        throw new TypeError('liveNode is not a Node');
+      }
+
+      var siblingNode = this.map[siblingId].staticNode;
+      var staticNode = this.composeStaticReference(liveNode);
+
+      return siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+    }
+  }, {
+    key: 'replaceReference',
+    value: function replaceReference(liveNode, referenceId) {
+      if (!this.isReferenceId(referenceId)) {
+        throw new ReferenceError('reference with specified referenceId is not found');
+      }
+
+      var oldStaticElement = this.map[referenceId].staticNode;
+      var newStaticElement = this.composeStaticReference(liveNode, referenceId);
+
+      return oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
+    }
+  }, {
+    key: 'flush',
+    value: function flush() {
+      var _this3 = this;
+
+      Object.keys(this.map).forEach(function (id) {
+        var staticNode = _this3.map[id].staticNode;
+
+        var node = staticNode;
+
+        while (node && !(0, _anodum.isDocumentNode)(node)) {
+          if (!node.parentNode) {
+            delete _this3.map[id];
+            return;
+          }
+          node = node.parentNode;
+        }
+      });
+    }
+  }]);
+
+  return ReferenceMap;
+}();
+
+exports.default = ReferenceMap;
 
 /***/ })
 /******/ ])["default"];
