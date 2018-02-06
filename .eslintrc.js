@@ -4,6 +4,14 @@ module.exports = {
     window: true,
     document: true,
     MutationObserver: true,
-
+    describe: true,
+    it: true,
+    jasmine: true,
+    expect: true,
+    beforeEach: true,
+    afterEach: true,
+    beforeAll: true,
+    afterAll: true,
+    DOMParser: true,
   }
 };
