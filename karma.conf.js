@@ -15,7 +15,7 @@ module.exports = function (config) {
       'test/index.spec.js': 'webpack',
     },
     webpack: {
-      devtool: 'inline-source-referenceMap',
+      devtool: 'inline-source-map',
       module: {
         loaders: [
           {
