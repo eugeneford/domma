@@ -22,9 +22,14 @@ export default class ReferenceMap {
   saveReference(liveNode, staticNode, id = generateUuid()) {
     liveNode.setAttribute(this.options.referenceAttribute, id);
     this.map[id] = { staticNode };
+    return id;
   }
 
   composeStaticReference(liveNode, id) {
+    if (!isDocumentNode(liveNode) && !isElementNode(liveNode)) {
+      throw new TypeError('liveNode is not neither Document nor Element');
+    }
+
     const staticNode = liveNode.cloneNode(true);
     const rootPath = getTreePathOfNode(liveNode);
 
@@ -34,9 +39,13 @@ export default class ReferenceMap {
       path.splice(0, rootPath.length, 0);
 
       const sNode = getNodeByTreePath(staticNode, path);
-      const refId = liveNode === lNode ? id : undefined;
 
-      this.saveReference(lNode, sNode, refId);
+      if (id && liveNode === lNode) {
+        this.saveReference(lNode, sNode, id);
+      } else {
+        this.saveReference(lNode, sNode);
+      }
+
       this.options.forEachReferenceSave(lNode, sNode);
     }, true);
 
@@ -55,9 +64,13 @@ export default class ReferenceMap {
       if (!isElementNode(lNode)) return;
 
       const sNode = getNodeByTreePath(staticRoot, path);
-      const refId = liveNode === lNode ? id : undefined;
 
-      this.saveReference(lNode, sNode, refId);
+      if (id && liveNode === lNode) {
+        this.saveReference(lNode, sNode, id);
+      } else {
+        this.saveReference(lNode, sNode);
+      }
+
       this.options.forEachReferenceSave(lNode, sNode);
     }, true);
 
@@ -152,7 +165,10 @@ export default class ReferenceMap {
     }
 
     const { staticNode } = this.map[id];
-    return staticNode.parentNode.removeChild(staticNode);
+    staticNode.parentNode.removeChild(staticNode);
+    delete this.map[id];
+
+    return staticNode;
   }
 
   appendReference(liveNode, containerId) {
@@ -160,14 +176,12 @@ export default class ReferenceMap {
       throw new ReferenceError('reference with specified containerId is not found');
     }
 
-    if (!isNode(liveNode)) {
-      throw new TypeError('liveNode is not a Node');
-    }
-
     const staticContainer = this.map[containerId].staticNode;
     const staticNode = this.composeStaticReference(liveNode);
 
-    return staticContainer.appendChild(staticNode);
+    staticContainer.appendChild(staticNode);
+
+    return staticNode;
   }
 
   insertReferenceBefore(liveNode, siblingId) {
@@ -175,14 +189,12 @@ export default class ReferenceMap {
       throw new ReferenceError('reference with specified siblingId is not found');
     }
 
-    if (!isNode(liveNode)) {
-      throw new TypeError('liveNode is not a Node');
-    }
-
     const siblingNode = this.map[siblingId].staticNode;
     const staticNode = this.composeStaticReference(liveNode);
 
-    return siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+    siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+
+    return staticNode;
   }
 
   replaceReference(liveNode, referenceId) {
@@ -193,7 +205,10 @@ export default class ReferenceMap {
     const oldStaticElement = this.map[referenceId].staticNode;
     const newStaticElement = this.composeStaticReference(liveNode, referenceId);
 
-    return oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
+    oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
+    delete this.map[referenceId];
+
+    return newStaticElement;
   }
 
   flush() {
