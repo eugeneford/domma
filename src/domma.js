@@ -14,10 +14,11 @@ export default class Domma {
     this.driver = new MutationDriver(options);
     this.transactionStatus = 'resolved';
     this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
-    this.mutationObserver = new MutationObserver((mutations) => {
+    this.additiveEmitter = (mutations) => {
       if (this.isTransactionPending()) return;
       this.driver.addAdditiveMutations(mutations);
-    });
+    };
+    this.mutationObserver = new MutationObserver(this.additiveEmitter);
   }
 
   connectStaticDocument(staticDOM) {
