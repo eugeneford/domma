@@ -13,5 +13,7 @@ module.exports = {
     beforeAll: true,
     afterAll: true,
     DOMParser: true,
+    spyOnProperty: true,
+    spyOn: true,
   }
 };
