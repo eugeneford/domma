@@ -370,4 +370,39 @@ describe('MutationDriver', () => {
       expect(unbindSpy).toHaveBeenCalledWith(staticElement);
     });
   });
+
+  describe('ejectAdditiveAttributeMutation', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+    });
+
+    it('old attribute value is reverted', () => {
+      const setReferenceAttributeSpy = spyOn(driver.referenceMap, 'setReferenceAttribute');
+      const getReferenceSpy = spyOn(driver.referenceMap, 'getReferenceId');
+      const liveElement = document.createElement('div');
+      const mutation = {
+        attributeName: 'class',
+        oldValue: 'initial',
+      };
+
+      getReferenceSpy.and.returnValue('reference-id');
+      driver.ejectAdditiveAttributeMutation(liveElement, mutation);
+      expect(setReferenceAttributeSpy).toHaveBeenCalledWith('reference-id', 'class', 'initial');
+    });
+
+    it('attribute is removed', () => {
+      const removeReferenceAttributeSpy = spyOn(driver.referenceMap, 'removeReferenceAttribute');
+      const getReferenceSpy = spyOn(driver.referenceMap, 'getReferenceId');
+      const liveElement = document.createElement('div');
+      const mutation = {
+        attributeName: 'class',
+      };
+
+      getReferenceSpy.and.returnValue('reference-id');
+      driver.ejectAdditiveAttributeMutation(liveElement, mutation);
+      expect(removeReferenceAttributeSpy).toHaveBeenCalledWith('reference-id', 'class');
+    });
+  });
 });
