@@ -44,10 +44,6 @@ export default class MutationDriver {
     return this.liveDOM;
   }
 
-  getLastTransaction() {
-    return this.lastTransaction;
-  }
-
   ejectAdditiveMutations(liveElement) {
     traverseNode(liveElement, (lNode) => {
       const containerId = this.referenceMap.getReferenceId(lNode);
@@ -202,5 +198,9 @@ export default class MutationDriver {
     const transaction = squashMutations(mutations);
     transaction.forEach(this.conductMutation);
     this.lastTransaction = transaction;
+  }
+
+  getLastTransaction() {
+    return this.lastTransaction;
   }
 }
