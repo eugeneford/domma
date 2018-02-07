@@ -510,4 +510,21 @@ describe('ReferenceMap', () => {
       expect(Object.keys(referenceMap.map).length).toBe(0);
     });
   });
+
+  describe('unbind', () => {
+    let referenceMap;
+    let refAttribute;
+
+    beforeEach(() => {
+      referenceMap = new ReferenceMap();
+      refAttribute = referenceMap.options.referenceAttribute;
+    });
+
+    it('binding attributes are removed', () => {
+      const node = document.createElement('div');
+      node.setAttribute(refAttribute, 'test-id');
+      referenceMap.unbind(node);
+      expect(node.hasAttribute(refAttribute)).toBe(false);
+    });
+  });
 });
