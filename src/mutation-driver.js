@@ -60,9 +60,48 @@ export default class MutationDriver {
     }
   }
 
+  ejectAdditiveChildListMutation(liveElement, mutation) {
+    const containerNode = this.referenceMap.getReference(liveElement);
+    const {
+      addedNodes,
+      removedNodes,
+    } = mutation;
+
+    addedNodes.forEach((addedLiveNode) => {
+      if (isTextNode(addedLiveNode)) {
+        const liveList = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
+        const liveIndex = liveList.indexOf(addedLiveNode);
+        const staticNode = containerNode.childNodes[liveIndex];
+        containerNode.removeChild(staticNode);
+      }
+
+      const id = this.referenceMap.getReferenceId(addedLiveNode);
+      if (!this.referenceMap.isReferenceId(id)) return;
+      this.referenceMap.removeReference(id);
+      this.referenceMap.flush();
+      addedLiveNode.removeAttribute(this.options.referenceAttribute);
+    });
+
+    removedNodes.forEach((removedLiveNode) => {
+      if (isTextNode(removedLiveNode)) {
+        const textMutations = this.getAdditiveMutations(removedLiveNode);
+        const staticNode = removedLiveNode.cloneNode(true);
+
+        textMutations.forEach((textMutation) => {
+          staticNode.nodeValue = textMutation.oldValue;
+        });
+
+        if (containerNode.firstChild) {
+          containerNode.insertBefore(staticNode, containerNode.firstChild);
+        } else {
+          containerNode.appendChild(staticNode, containerNode.firstChild);
+        }
+      }
+    });
+  }
+
   ejectAdditiveMutations(liveElement) {
     traverseNode(liveElement, (lNode) => {
-      const containerNode = this.referenceMap.getReference(lNode);
       const mutations = this.getAdditiveMutations(lNode);
 
       this.ejectAdditiveReferenceMapMutations(liveElement);
@@ -74,44 +113,7 @@ export default class MutationDriver {
             break;
           }
           case mutationTypes.childList: {
-            const {
-              addedNodes,
-              removedNodes,
-              nextSibling,
-              previousSibling,
-            } = mutation;
-
-            addedNodes.forEach((addedLiveNode) => {
-              if (isTextNode(addedLiveNode)) {
-                const liveList = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
-                const liveIndex = liveList.indexOf(addedLiveNode);
-                const staticNode = containerNode.childNodes[liveIndex];
-                containerNode.removeChild(staticNode);
-              }
-
-              const id = this.referenceMap.getReferenceId(addedLiveNode);
-              if (!this.referenceMap.isReferenceId(id)) return;
-              this.referenceMap.removeReference(id);
-              this.referenceMap.flush();
-              addedLiveNode.removeAttribute(this.options.referenceAttribute);
-            });
-
-            removedNodes.forEach((removedLiveNode) => {
-              if (isTextNode(removedLiveNode)) {
-                const textMutations = this.getAdditiveMutations(removedLiveNode);
-                const staticNode = removedLiveNode.cloneNode(true);
-
-                textMutations.forEach((textMutation) => {
-                  staticNode.nodeValue = textMutation.oldValue;
-                });
-
-                if (containerNode.firstChild) {
-                  containerNode.insertBefore(staticNode, containerNode.firstChild);
-                } else {
-                  containerNode.appendChild(staticNode, containerNode.firstChild);
-                }
-              }
-            });
+            this.ejectAdditiveChildListMutation(lNode, mutation);
             break;
           }
           default: {
