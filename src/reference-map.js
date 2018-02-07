@@ -225,4 +225,9 @@ export default class ReferenceMap {
       }
     });
   }
+
+  unbind(liveNode) {
+    if (!isElementNode(liveNode)) return;
+    liveNode.removeAttribute(this.options.referenceAttribute);
+  }
 }

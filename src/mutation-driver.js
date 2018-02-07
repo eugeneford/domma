@@ -50,9 +50,7 @@ export default class MutationDriver {
       const containerNode = this.referenceMap.getReference(lNode);
       const mutations = this.getAdditiveMutations(lNode);
 
-      if (isElementNode(containerNode)) {
-        containerNode.removeAttribute(this.referenceMap.options.referenceAttribute);
-      }
+      this.referenceMap.unbind(containerNode);
 
       mutations.forEach((mutation) => {
         switch (mutation.type) {
