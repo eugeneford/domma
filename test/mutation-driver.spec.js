@@ -359,7 +359,7 @@ describe('MutationDriver', () => {
       driver = new MutationDriver();
     });
 
-    it('correct set of additive mutations is returned', () => {
+    it('attributes are removed', () => {
       const unbindSpy = spyOn(driver.referenceMap, 'unbind');
       const getReferenceSpy = spyOn(driver.referenceMap, 'getReference');
       const liveElement = document.createElement('div');
