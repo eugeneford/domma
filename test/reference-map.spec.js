@@ -456,7 +456,7 @@ describe('ReferenceMap', () => {
     });
   });
 
-  describe('insertReferenceBefore', () => {
+  describe('replaceReference', () => {
     let referenceMap;
     let refAttribute;
 
@@ -488,7 +488,6 @@ describe('ReferenceMap', () => {
 
   describe('flush', () => {
     let referenceMap;
-    let refAttribute;
 
     beforeEach(() => {
       referenceMap = new ReferenceMap();
