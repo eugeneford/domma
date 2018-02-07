@@ -17,7 +17,7 @@ export default class MutationDriver {
 
     this.conductTransaction = this.conductTransaction.bind(this);
     this.conductMutation = this.conductMutation.bind(this);
-    this.reduceAdditiveMutationsOfNode = this.reduceAdditiveMutationsOfNode.bind(this);
+    this.reduceAdditiveMutations = this.reduceAdditiveMutations.bind(this);
   }
 
   connectStaticDocument(staticDOM) {
@@ -48,7 +48,7 @@ export default class MutationDriver {
     traverseNode(liveElement, (lNode) => {
       const containerId = this.referenceMap.getReferenceId(lNode);
       const containerNode = this.referenceMap.getReference(lNode);
-      const mutations = this.getAdditiveMutationsOfNode(lNode);
+      const mutations = this.getAdditiveMutations(lNode);
 
       if (isElementNode(containerNode)) {
         containerNode.removeAttribute(this.referenceMap.options.referenceAttribute);
@@ -90,7 +90,7 @@ export default class MutationDriver {
 
             removedNodes.forEach((removedLiveNode) => {
               if (isTextNode(removedLiveNode)) {
-                const textMutations = this.getAdditiveMutationsOfNode(removedLiveNode);
+                const textMutations = this.getAdditiveMutations(removedLiveNode);
                 const staticNode = removedLiveNode.cloneNode(true);
 
                 textMutations.forEach((textMutation) => {
@@ -118,18 +118,18 @@ export default class MutationDriver {
     this.additiveMutations = this.additiveMutations.concat(mutations);
   }
 
-  reduceAdditiveMutationsOfNode(liveNode, types = mutationTypes.all) {
-    const additiveMutations = this.getAdditiveMutationsOfNode(liveNode, types);
+  reduceAdditiveMutations(liveNode, types = mutationTypes.all) {
+    const additiveMutations = this.getAdditiveMutations(liveNode, types);
 
     additiveMutations.forEach((mutation) => {
       const index = this.additiveMutations.indexOf(mutation);
       this.additiveMutations.splice(index, 1);
-      mutation.addedNodes.forEach(node => this.reduceAdditiveMutationsOfNode(node));
-      mutation.removedNodes.forEach(node => this.reduceAdditiveMutationsOfNode(node));
+      mutation.addedNodes.forEach(node => this.reduceAdditiveMutations(node));
+      mutation.removedNodes.forEach(node => this.reduceAdditiveMutations(node));
     });
   }
 
-  getAdditiveMutationsOfNode(liveNode, types = mutationTypes.all) {
+  getAdditiveMutations(liveNode, types = mutationTypes.all) {
     return this.additiveMutations.filter((mutation) => {
       const sameTarget = mutation.target === liveNode;
       const validType = types.indexOf(mutation.type) > -1;
@@ -153,7 +153,7 @@ export default class MutationDriver {
   conductCharacterDataMutation(mutation) {
     const liveNode = mutation.target.parentNode;
     const referenceId = this.referenceMap.getReferenceId(liveNode);
-    this.reduceAdditiveMutationsOfNode(mutation.target, [mutationTypes.characterData]);
+    this.reduceAdditiveMutations(mutation.target, [mutationTypes.characterData]);
     this.referenceMap.replaceReference(liveNode, referenceId);
     this.ejectAdditiveMutations(liveNode);
   }
@@ -170,7 +170,7 @@ export default class MutationDriver {
 
     // for target.innerHTML or target.replacedChild
     if (addedNodes.length && removedNodes.length && !nextSibling && !previousSibling) {
-      this.reduceAdditiveMutationsOfNode(liveNode, [mutationTypes.childList]);
+      this.reduceAdditiveMutations(liveNode, [mutationTypes.childList]);
     }
 
     this.referenceMap.replaceReference(liveNode, referenceId);
