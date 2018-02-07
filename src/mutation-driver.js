@@ -108,17 +108,12 @@ export default class MutationDriver {
 
       mutations.forEach((mutation) => {
         switch (mutation.type) {
-          case mutationTypes.attributes: {
+          case mutationTypes.attributes:
             this.ejectAdditiveAttributeMutation(lNode, mutation);
             break;
-          }
-          case mutationTypes.childList: {
+          default:
             this.ejectAdditiveChildListMutation(lNode, mutation);
             break;
-          }
-          default: {
-            break;
-          }
         }
       });
     });
