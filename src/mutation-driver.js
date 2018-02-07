@@ -195,7 +195,7 @@ export default class MutationDriver {
   }
 
   conductTransaction(mutations) {
-    const transaction = squashMutations(mutations);
+    const transaction = mutations;
     transaction.forEach(this.conductMutation);
     this.lastTransaction = transaction;
   }
