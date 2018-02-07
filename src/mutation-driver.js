@@ -44,9 +44,19 @@ export default class MutationDriver {
     return this.liveDOM;
   }
 
+  ejectAdditiveAttributeMutation(liveElement, mutation) {
+    const { attributeName, oldValue } = mutation;
+    const containerId = this.referenceMap.getReferenceId(liveElement);
+
+    if (oldValue) {
+      this.referenceMap.setReferenceAttribute(containerId, attributeName, oldValue);
+    } else {
+      this.referenceMap.removeReferenceAttribute(containerId, attributeName);
+    }
+  }
+
   ejectAdditiveMutations(liveElement) {
     traverseNode(liveElement, (lNode) => {
-      const containerId = this.referenceMap.getReferenceId(lNode);
       const containerNode = this.referenceMap.getReference(lNode);
       const mutations = this.getAdditiveMutations(lNode);
 
@@ -55,12 +65,7 @@ export default class MutationDriver {
       mutations.forEach((mutation) => {
         switch (mutation.type) {
           case mutationTypes.attributes: {
-            const { attributeName, oldValue } = mutation;
-            if (oldValue) {
-              this.referenceMap.setReferenceAttribute(containerId, attributeName, oldValue);
-            } else {
-              this.referenceMap.removeReferenceAttribute(containerId, attributeName);
-            }
+            this.ejectAdditiveAttributeMutation(lNode, mutation);
             break;
           }
           case mutationTypes.childList: {
