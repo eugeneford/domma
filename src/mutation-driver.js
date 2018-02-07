@@ -104,7 +104,7 @@ export default class MutationDriver {
     traverseNode(liveElement, (lNode) => {
       const mutations = this.getAdditiveMutations(lNode);
 
-      this.ejectAdditiveReferenceMapMutations(liveElement);
+      this.ejectAdditiveReferenceMapMutations(lNode);
 
       mutations.forEach((mutation) => {
         switch (mutation.type) {
