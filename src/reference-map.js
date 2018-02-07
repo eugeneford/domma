@@ -206,7 +206,6 @@ export default class ReferenceMap {
     const newStaticElement = this.composeStaticReference(liveNode, referenceId);
 
     oldStaticElement.parentNode.replaceChild(newStaticElement, oldStaticElement);
-    delete this.map[referenceId];
 
     return newStaticElement;
   }
