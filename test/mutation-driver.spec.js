@@ -325,4 +325,30 @@ describe('MutationDriver', () => {
       expect(driver.additiveMutations[0].target).toBe(targetNode);
     });
   });
+
+  describe('conductTransaction', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+    });
+
+    it('correct set of additive mutations is returned', () => {
+      const conductMutationSpy = spyOn(driver, 'conductMutation');
+      const mutations = [
+        {
+          type: 'attributes',
+          target: document.createElement('div'),
+        },
+        {
+          type: 'childList',
+          target: document.createElement('div'),
+        },
+      ];
+
+      driver.conductTransaction(mutations);
+
+      expect(conductMutationSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
