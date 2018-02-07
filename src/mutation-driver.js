@@ -48,7 +48,7 @@ export default class MutationDriver {
     return this.lastTransaction;
   }
 
-  ejectMutationsFromReferenceOfNode(liveElement) {
+  ejectAdditiveMutations(liveElement) {
     traverseNode(liveElement, (lNode) => {
       const containerId = this.referenceMap.getReferenceId(lNode);
       const containerNode = this.referenceMap.getReference(lNode);
@@ -159,7 +159,7 @@ export default class MutationDriver {
     const referenceId = this.referenceMap.getReferenceId(liveNode);
     this.reduceAdditiveMutationsOfNode(mutation.target, [mutationTypes.characterData]);
     this.referenceMap.replaceReference(liveNode, referenceId);
-    this.ejectMutationsFromReferenceOfNode(liveNode);
+    this.ejectAdditiveMutations(liveNode);
   }
 
   conductChildListMutation(mutation) {
@@ -178,7 +178,7 @@ export default class MutationDriver {
     }
 
     this.referenceMap.replaceReference(liveNode, referenceId);
-    this.ejectMutationsFromReferenceOfNode(liveNode);
+    this.ejectAdditiveMutations(liveNode);
   }
 
   conductMutation(mutation) {
