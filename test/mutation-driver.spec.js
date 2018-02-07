@@ -351,4 +351,23 @@ describe('MutationDriver', () => {
       expect(conductMutationSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('ejectAdditiveReferenceMapMutations', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+    });
+
+    it('correct set of additive mutations is returned', () => {
+      const unbindSpy = spyOn(driver.referenceMap, 'unbind');
+      const getReferenceSpy = spyOn(driver.referenceMap, 'getReference');
+      const liveElement = document.createElement('div');
+      const staticElement = document.createElement('div');
+
+      getReferenceSpy.and.returnValue(staticElement);
+      driver.ejectAdditiveReferenceMapMutations(liveElement);
+      expect(unbindSpy).toHaveBeenCalledWith(staticElement);
+    });
+  });
 });
