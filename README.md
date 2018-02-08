@@ -7,7 +7,7 @@
 </h3>
 
 <p align="center">
-  A small library for flexible document mapping
+  Keep your live and static documents in sync
 </p>
 
 <p align="center">

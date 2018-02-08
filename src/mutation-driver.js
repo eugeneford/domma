@@ -6,7 +6,6 @@ import {
 } from 'anodum';
 
 import mutationTypes from './mutation-types';
-import squashMutations from './squash-mutations';
 import ReferenceMap from './reference-map';
 
 export default class MutationDriver {
