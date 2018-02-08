@@ -67,35 +67,47 @@ export default class MutationDriver {
       removedNodes,
     } = mutation;
 
+    let nextLiveSibling = mutation.nextSibling;
+    if (removedNodes.length && addedNodes.length) {
+      nextLiveSibling = addedNodes[addedNodes.length - 1].nextSibling;
+    }
+
+    let nextStaticSibling;
+    if (nextLiveSibling) {
+      const liveNodes = Array.prototype.slice.call(nextLiveSibling.parentNode.childNodes);
+      const liveIndex = liveNodes.indexOf(nextLiveSibling);
+      nextStaticSibling = containerNode.childNodes[liveIndex];
+    }
+
     addedNodes.forEach((addedLiveNode) => {
-      if (isTextNode(addedLiveNode)) {
-        const liveList = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
-        const liveIndex = liveList.indexOf(addedLiveNode);
+      if (isElementNode(addedLiveNode)) {
+        const id = this.referenceMap.getReferenceId(addedLiveNode);
+        this.referenceMap.removeReference(id);
+        this.referenceMap.unbind(addedLiveNode);
+      } else {
+        const liveNodes = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
+        const liveIndex = liveNodes.indexOf(addedLiveNode);
         const staticNode = containerNode.childNodes[liveIndex];
         containerNode.removeChild(staticNode);
       }
-
-      const id = this.referenceMap.getReferenceId(addedLiveNode);
-      if (!this.referenceMap.isReferenceId(id)) return;
-      this.referenceMap.removeReference(id);
-      this.referenceMap.flush();
-      addedLiveNode.removeAttribute(this.options.referenceAttribute);
     });
 
     removedNodes.forEach((removedLiveNode) => {
-      if (isTextNode(removedLiveNode)) {
+      let staticNode;
+      if (isElementNode(removedLiveNode)) {
+        staticNode = this.referenceMap.getReference(removedLiveNode);
+      } else {
+        staticNode = removedLiveNode.cloneNode();
         const textMutations = this.getAdditiveMutations(removedLiveNode);
-        const staticNode = removedLiveNode.cloneNode(true);
-
         textMutations.forEach((textMutation) => {
           staticNode.nodeValue = textMutation.oldValue;
         });
+      }
 
-        if (containerNode.firstChild) {
-          containerNode.insertBefore(staticNode, containerNode.firstChild);
-        } else {
-          containerNode.appendChild(staticNode, containerNode.firstChild);
-        }
+      if (nextStaticSibling) {
+        containerNode.insertBefore(staticNode, nextStaticSibling);
+      } else {
+        containerNode.appendChild(staticNode);
       }
     });
   }
@@ -180,6 +192,7 @@ export default class MutationDriver {
 
     this.referenceMap.replaceReference(liveNode, referenceId);
     this.ejectAdditiveMutations(liveNode);
+    this.referenceMap.flush();
   }
 
   conductMutation(mutation) {
