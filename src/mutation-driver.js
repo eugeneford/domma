@@ -118,7 +118,7 @@ export default class MutationDriver {
 
       this.ejectAdditiveReferenceMapMutations(lNode);
 
-      mutations.forEach((mutation) => {
+      mutations.reverse().forEach((mutation) => {
         switch (mutation.type) {
           case mutationTypes.attributes:
             this.ejectAdditiveAttributeMutation(lNode, mutation);

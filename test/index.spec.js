@@ -149,4 +149,27 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('sequence of attribute changes is correctly reverted', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.setAttribute('id', 'original');
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.driver.liveDOM.body.setAttribute('id', 'changed-1');
+    domma.driver.liveDOM.body.setAttribute('id', 'changed-2');
+    domma.driver.liveDOM.body.setAttribute('id', 'changed-3');
+
+    domma.conductTransaction((liveDOM) => {
+      const { body } = liveDOM;
+      body.innerHTML = 'text';
+    }).then(() => {
+      const { body } = domma.driver.staticDOM;
+      expect(body.innerHTML).toBe('text');
+      expect(body.getAttribute('id')).toBe('original');
+      done();
+    });
+  });
 });
