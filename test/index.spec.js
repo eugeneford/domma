@@ -51,6 +51,41 @@ describe('integrations tests', () => {
     });
   });
 
+  it('additive text node added between 2 static elements is refused during the sync', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.innerHTML = '<div></div><div></div>';
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.driver.liveDOM.body.insertBefore(document.createTextNode('dynamic'), domma.driver.liveDOM.body.lastChild);
+    domma.conductTransaction((liveDOM) => {
+      const { body } = liveDOM;
+      body.appendChild(document.createElement('p'));
+    }).then(() => {
+      expect(staticDOM.body.innerHTML).toBe('<div></div><div></div><p></p>');
+      done();
+    });
+  });
+
+  it('additive text node added as the last node is refused during the sync', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.innerHTML = '<div></div>';
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    const additiveNode = document.createTextNode('dynamic');
+    domma.driver.liveDOM.body.appendChild(additiveNode);
+    domma.conductTransaction((liveDOM) => {
+      const { body } = liveDOM;
+      body.appendChild(document.createElement('p'));
+    }).then(() => {
+      expect(staticDOM.body.innerHTML).toBe('<div></div><p></p>');
+      done();
+    });
+  });
+
   it('additive attribute is refused during the sync', (done) => {
     const domma = new Domma();
     const staticDOM = document.implementation.createHTMLDocument('integration');
