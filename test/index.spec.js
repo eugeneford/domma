@@ -145,12 +145,12 @@ describe('integrations tests', () => {
       body.insertBefore(document.createElement('section'), body.lastChild);
     }).then(() => {
       const { body } = domma.driver.staticDOM;
-      expect(body.innerHTML).toBe('<div></div><p></p>text<section></section><div></div><!--comment-->');
+      expect(body.innerHTML).toBe('<div></div><p></p>text<div></div><section></section><!--comment-->');
       done();
     });
   });
 
-  it('sequence of attribute changes is correctly reverted', (done) => {
+  it('sequence of additive attribute changes is correctly reverted', (done) => {
     const domma = new Domma();
     const staticDOM = document.implementation.createHTMLDocument('integration');
     staticDOM.body.setAttribute('id', 'original');
@@ -169,6 +169,28 @@ describe('integrations tests', () => {
       const { body } = domma.driver.staticDOM;
       expect(body.innerHTML).toBe('text');
       expect(body.getAttribute('id')).toBe('original');
+      done();
+    });
+  });
+
+  it('sequence of additive node removals is correctly reverted', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.innerHTML = '<div></div><p></p>text<div></div><!--comment-->';
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.driver.liveDOM.body.removeChild(domma.driver.liveDOM.body.childNodes[1]);
+    domma.driver.liveDOM.body.removeChild(domma.driver.liveDOM.body.childNodes[1]);
+    domma.driver.liveDOM.body.removeChild(domma.driver.liveDOM.body.childNodes[1]);
+
+    domma.conductTransaction((liveDOM) => {
+      const { body } = liveDOM;
+      body.insertBefore(document.createElement('section'), body.lastChild);
+    }).then(() => {
+      const { body } = domma.driver.staticDOM;
+      expect(body.innerHTML).toBe('<div></div><p></p>text<div></div><section></section><!--comment-->');
       done();
     });
   });

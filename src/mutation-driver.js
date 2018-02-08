@@ -70,13 +70,32 @@ export default class MutationDriver {
     let nextLiveSibling = mutation.nextSibling;
     if (removedNodes.length && addedNodes.length) {
       nextLiveSibling = addedNodes[addedNodes.length - 1].nextSibling;
+    } else if (removedNodes.length) {
+      const { previousSibling, nextSibling } = mutation;
+      let node = nextSibling;
+      while (node) {
+        if (previousSibling === node.previousSibling) {
+          nextLiveSibling = node;
+          break;
+        }
+        node = node.previousSibling;
+      }
     }
 
     let nextStaticSibling;
-    if (nextLiveSibling) {
+    if (nextLiveSibling && nextLiveSibling.parentNode) {
       const liveNodes = Array.prototype.slice.call(nextLiveSibling.parentNode.childNodes);
       const liveIndex = liveNodes.indexOf(nextLiveSibling);
       nextStaticSibling = containerNode.childNodes[liveIndex];
+    }
+
+    const prevLiveSibling = mutation.previousSibling;
+
+    let prevStaticSibling;
+    if (prevLiveSibling && prevLiveSibling.parentNode) {
+      const liveNodes = Array.prototype.slice.call(prevLiveSibling.parentNode.childNodes);
+      const liveIndex = liveNodes.indexOf(prevLiveSibling);
+      prevStaticSibling = containerNode.childNodes[liveIndex];
     }
 
     addedNodes.forEach((addedLiveNode) => {
@@ -106,6 +125,8 @@ export default class MutationDriver {
 
       if (nextStaticSibling) {
         containerNode.insertBefore(staticNode, nextStaticSibling);
+      } else if (prevStaticSibling && prevStaticSibling.nextSibling) {
+        containerNode.insertBefore(staticNode, prevStaticSibling.nextSibling);
       } else {
         containerNode.appendChild(staticNode);
       }
