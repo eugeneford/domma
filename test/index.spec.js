@@ -194,4 +194,24 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('sequence of additive node inserts is refused during the sync', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.innerHTML = '<h1></h1>';
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.driver.liveDOM.body.innerHTML = 'text1<!--comment-->text2';
+    domma.driver.liveDOM.body.innerHTML = '<div></div>';
+
+    domma.conductTransaction((liveDOM) => {
+      const { body } = liveDOM;
+      body.firstChild.appendChild(document.createTextNode('text'));
+    }).then(() => {
+      expect(staticDOM.body.innerHTML).toBe('<h1></h1>');
+      done();
+    });
+  });
 });

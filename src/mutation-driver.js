@@ -104,9 +104,14 @@ export default class MutationDriver {
         this.referenceMap.removeReference(id);
         this.referenceMap.unbind(addedLiveNode);
       } else {
-        const liveNodes = Array.prototype.slice.call(addedLiveNode.parentNode.childNodes);
-        const liveIndex = liveNodes.indexOf(addedLiveNode);
-        const staticNode = containerNode.childNodes[liveIndex];
+        let staticNode;
+        if (nextStaticSibling) {
+          staticNode = nextStaticSibling.previousSibling;
+        } else if (prevStaticSibling && prevStaticSibling.nextSibling) {
+          staticNode = prevStaticSibling.nextSibling;
+        } else {
+          staticNode = containerNode.firstChild;
+        }
         containerNode.removeChild(staticNode);
       }
     });
