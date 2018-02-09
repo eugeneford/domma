@@ -64,3 +64,21 @@ domma.conductTransaction((liveDOM) => {
 });
 
 ```
+
+## Contributing to Domma
+Contributions are always welcome.
+Before contributing please read the [code of conduct](https://js.foundation/community/code-of-conduct) &
+[search the issue tracker](https://github.com/eugeneford/domma/issues) (your issue may have already been discussed or fixed).
+
+To contribute, follow next steps:
+* Fork Domma
+* Commit your changes
+* Open a Pull Request.
+
+### Feature Requests
+Feature requests should be submitted in the issue tracker, with a description
+of the expected behavior & use case, where they'll remain closed until sufficient interest (e.g. :+1: reactions).
+Before submitting a feature request, please search for similar ones in the closed issues.
+
+## License
+Released under the [MIT License](https://github.com/eugeneford/domma/blob/master/LICENSE)
