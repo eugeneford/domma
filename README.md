@@ -25,7 +25,42 @@
 ## Overview
 
 ## How to Install
-In order to use domma simply do:
 ```js
 npm install --save domma
+```
+
+## Get Started
+```js
+import Domma from "domma";
+
+// Get your own static document
+const staticDocument = document.implementation.createHTMLDocument('');
+
+// Create Domma instance
+const domma = new Domma();
+
+// Connect your static document to domma
+domma.connectStaticDocument(staticDocument);
+
+// Compose a "live" clone of your document 
+domma.composeLiveDocument();
+
+// Apply any dynamic changes that should not be synced with static DOM
+const liveDocument = domma.getLiveDocument();
+liveDocument.body.setAttribute('id', 'dynamic-id');
+
+// Apply changes that should be synced with static DOM
+domma.conductTransaction((liveDOM) => {
+  liveDOM.body.innerHTML = 'hello world';
+}).then(() => {
+  const staticDOM = domma.getStaticDocument();
+  const body = staticDOM.body;
+  
+  // Dynamic changes are not synced
+  const id = body.getAttribute('id'); // id => undefined
+  
+  // Transaction changes are synced
+  const html = body.innerHTML; // html => 'hello world'
+});
+
 ```
