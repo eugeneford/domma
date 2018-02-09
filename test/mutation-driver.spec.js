@@ -174,6 +174,25 @@ describe('MutationDriver', () => {
 
       expect(removeReferenceAttributeSpy).toHaveBeenCalledWith('test-id', 'class');
     });
+
+    it('callbacks are called correctly', () => {
+      const onBeforeSyncSpy = spyOn(driver.options, 'onBeforeSync');
+      const onAfterSyncSpy = spyOn(driver.options, 'onAfterSync');
+      const reference = document.createElement('div');
+      const mutation = {
+        target: document.createElement('div'),
+        attributeName: 'class',
+      };
+
+      spyOn(driver.referenceMap, 'getReferenceId').and.returnValue('test-id');
+      spyOn(driver.referenceMap, 'getReference').and.returnValue(reference);
+      spyOn(driver.referenceMap, 'removeReferenceAttribute');
+
+      driver.conductAttributeMutation(mutation);
+
+      expect(onBeforeSyncSpy).toHaveBeenCalledWith(reference);
+      expect(onAfterSyncSpy).toHaveBeenCalledWith(reference);
+    });
   });
 
   describe('conductCharacterDataMutation', () => {
@@ -196,6 +215,27 @@ describe('MutationDriver', () => {
       driver.conductCharacterDataMutation(mutation);
 
       expect(replaceReferenceSpy).toHaveBeenCalledWith(mutation.target.parentNode, 'parent-id');
+    });
+
+    it('callbacks are called correctly', () => {
+      const onBeforeSyncSpy = spyOn(driver.options, 'onBeforeSync');
+      const onAfterSyncSpy = spyOn(driver.options, 'onAfterSync');
+      const reference = document.createElement('div');
+      const newReference = document.createElement('div');
+      const mutation = {
+        target: {
+          parentNode: document.createElement('div'),
+        },
+      };
+
+      spyOn(driver.referenceMap, 'getReference').and.returnValue(reference);
+      spyOn(driver.referenceMap, 'getReferenceId').and.returnValue('parent-id');
+      spyOn(driver.referenceMap, 'replaceReference').and.returnValue(newReference);
+
+      driver.conductCharacterDataMutation(mutation);
+
+      expect(onBeforeSyncSpy).toHaveBeenCalledWith(reference);
+      expect(onAfterSyncSpy).toHaveBeenCalledWith(newReference);
     });
   });
 
@@ -234,6 +274,27 @@ describe('MutationDriver', () => {
       driver.conductChildListMutation(mutation);
 
       expect(replaceReferenceSpy).toHaveBeenCalledWith(mutation.target, 'target-id');
+    });
+
+    it('callbacks are called correctly', () => {
+      const onBeforeSyncSpy = spyOn(driver.options, 'onBeforeSync');
+      const onAfterSyncSpy = spyOn(driver.options, 'onAfterSync');
+      const reference = document.createElement('div');
+      const newReference = document.createElement('div');
+      const mutation = {
+        addedNodes: [1],
+        removedNodes: [1],
+        target: document.createElement('div'),
+      };
+
+      spyOn(driver.referenceMap, 'getReferenceId').and.returnValue('target-id');
+      spyOn(driver.referenceMap, 'getReference').and.returnValue(reference);
+      spyOn(driver.referenceMap, 'replaceReference').and.returnValue(newReference);
+
+      driver.conductChildListMutation(mutation);
+
+      expect(onBeforeSyncSpy).toHaveBeenCalledWith(reference);
+      expect(onAfterSyncSpy).toHaveBeenCalledWith(newReference);
     });
   });
 

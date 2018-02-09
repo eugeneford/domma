@@ -254,6 +254,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _anodum = __webpack_require__(0);
@@ -262,7 +264,7 @@ var _mutationTypes = __webpack_require__(4);
 
 var _mutationTypes2 = _interopRequireDefault(_mutationTypes);
 
-var _referenceMap = __webpack_require__(5);
+var _referenceMap = __webpack_require__(6);
 
 var _referenceMap2 = _interopRequireDefault(_referenceMap);
 
@@ -274,6 +276,10 @@ var MutationDriver = function () {
   function MutationDriver(options) {
     _classCallCheck(this, MutationDriver);
 
+    this.options = _extends({
+      onBeforeSync: function onBeforeSync() {},
+      onAfterSync: function onAfterSync() {}
+    }, options);
     this.additiveMutations = [];
     this.lastTransaction = undefined;
     this.referenceMap = new _referenceMap2.default(options);
@@ -475,29 +481,37 @@ var MutationDriver = function () {
     key: 'conductAttributeMutation',
     value: function conductAttributeMutation(mutation) {
       var liveNode = mutation.target;
+      var reference = this.referenceMap.getReference(liveNode);
       var referenceId = this.referenceMap.getReferenceId(liveNode);
       var attribute = mutation.attributeName;
 
+      this.options.onBeforeSync(reference);
       if (liveNode.hasAttribute(attribute)) {
         var value = liveNode.getAttribute(attribute);
         this.referenceMap.setReferenceAttribute(referenceId, attribute, value);
       } else {
         this.referenceMap.removeReferenceAttribute(referenceId, attribute);
       }
+      this.options.onAfterSync(reference);
     }
   }, {
     key: 'conductCharacterDataMutation',
     value: function conductCharacterDataMutation(mutation) {
       var liveNode = mutation.target.parentNode;
+      var reference = this.referenceMap.getReference(liveNode);
       var referenceId = this.referenceMap.getReferenceId(liveNode);
       this.reduceAdditiveMutations(mutation.target, [_mutationTypes2.default.characterData]);
-      this.referenceMap.replaceReference(liveNode, referenceId);
+      this.options.onBeforeSync(reference);
+      var newReference = this.referenceMap.replaceReference(liveNode, referenceId);
       this.ejectAdditiveMutations(liveNode);
+      this.referenceMap.flush();
+      this.options.onAfterSync(newReference);
     }
   }, {
     key: 'conductChildListMutation',
     value: function conductChildListMutation(mutation) {
       var liveNode = mutation.target;
+      var reference = this.referenceMap.getReference(liveNode);
       var referenceId = this.referenceMap.getReferenceId(liveNode);
       var addedNodes = mutation.addedNodes,
           removedNodes = mutation.removedNodes,
@@ -510,9 +524,11 @@ var MutationDriver = function () {
         this.reduceAdditiveMutations(liveNode, [_mutationTypes2.default.childList]);
       }
 
-      this.referenceMap.replaceReference(liveNode, referenceId);
+      this.options.onBeforeSync(reference);
+      var newReference = this.referenceMap.replaceReference(liveNode, referenceId);
       this.ejectAdditiveMutations(liveNode);
       this.referenceMap.flush();
+      this.options.onAfterSync(newReference);
     }
   }, {
     key: 'conductMutation',
@@ -569,7 +585,8 @@ exports.default = {
 };
 
 /***/ }),
-/* 5 */
+/* 5 */,
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -583,7 +600,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _generateUuid = __webpack_require__(6);
+var _generateUuid = __webpack_require__(7);
 
 var _generateUuid2 = _interopRequireDefault(_generateUuid);
 
@@ -855,7 +872,7 @@ var ReferenceMap = function () {
 exports.default = ReferenceMap;
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports) {
 
 module.exports = function () {

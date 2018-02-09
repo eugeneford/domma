@@ -10,6 +10,13 @@ import ReferenceMap from './reference-map';
 
 export default class MutationDriver {
   constructor(options) {
+    this.options = {
+      onBeforeSync: () => {
+      },
+      onAfterSync: () => {
+      },
+      ...options,
+    };
     this.additiveMutations = [];
     this.lastTransaction = undefined;
     this.referenceMap = new ReferenceMap(options);
@@ -181,27 +188,35 @@ export default class MutationDriver {
 
   conductAttributeMutation(mutation) {
     const liveNode = mutation.target;
+    const reference = this.referenceMap.getReference(liveNode);
     const referenceId = this.referenceMap.getReferenceId(liveNode);
     const attribute = mutation.attributeName;
 
+    this.options.onBeforeSync(reference);
     if (liveNode.hasAttribute(attribute)) {
       const value = liveNode.getAttribute(attribute);
       this.referenceMap.setReferenceAttribute(referenceId, attribute, value);
     } else {
       this.referenceMap.removeReferenceAttribute(referenceId, attribute);
     }
+    this.options.onAfterSync(reference);
   }
 
   conductCharacterDataMutation(mutation) {
     const liveNode = mutation.target.parentNode;
+    const reference = this.referenceMap.getReference(liveNode);
     const referenceId = this.referenceMap.getReferenceId(liveNode);
     this.reduceAdditiveMutations(mutation.target, [mutationTypes.characterData]);
-    this.referenceMap.replaceReference(liveNode, referenceId);
+    this.options.onBeforeSync(reference);
+    const newReference = this.referenceMap.replaceReference(liveNode, referenceId);
     this.ejectAdditiveMutations(liveNode);
+    this.referenceMap.flush();
+    this.options.onAfterSync(newReference);
   }
 
   conductChildListMutation(mutation) {
     const liveNode = mutation.target;
+    const reference = this.referenceMap.getReference(liveNode);
     const referenceId = this.referenceMap.getReferenceId(liveNode);
     const {
       addedNodes,
@@ -215,9 +230,11 @@ export default class MutationDriver {
       this.reduceAdditiveMutations(liveNode, [mutationTypes.childList]);
     }
 
-    this.referenceMap.replaceReference(liveNode, referenceId);
+    this.options.onBeforeSync(reference);
+    const newReference = this.referenceMap.replaceReference(liveNode, referenceId);
     this.ejectAdditiveMutations(liveNode);
     this.referenceMap.flush();
+    this.options.onAfterSync(newReference);
   }
 
   conductMutation(mutation) {
