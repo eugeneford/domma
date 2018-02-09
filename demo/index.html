@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<iframe style="width: 100%; height: 90vh;"></iframe>
+<script src="../node_modules/babel-polyfill/dist/polyfill.min.js"></script>
+<script src="../node_modules/anodum/dist/anodum.js"></script>
+<script src="../dist/domma.js"></script>
+<script>
+  var d;
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'home.html');
+  xhr.send();
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState !== 4) return;
+    var staticHTML = xhr.responseText;
+    var frame = document.querySelector('iframe');
+
+    var staticDOM = anodum.domParser.parseFromString(staticHTML, 'text/html');
+
+    d = new domma();
+    d.connectStaticDocument(staticDOM);
+    d.composeLiveDocument();
+
+    var liveDOM = d.driver.getLiveDocument();
+    var liveHTML = anodum.serializeDocument(liveDOM);
+
+    console.log({ liveDOM: liveDOM });
+
+    // frame.onload = function(){
+    //   d.connectLiveDocument(this.contentDocument);
+    // };
+
+    var frameDocument = frame.contentDocument;
+    frameDocument.open();
+    frameDocument.write(liveHTML);
+    frameDocument.close();
+  }
+</script>
+</body>
+</html>

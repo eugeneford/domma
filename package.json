@@ -1,8 +1,8 @@
 {
   "name": "domma",
   "version": "0.9.0",
-  "description": "A small library for dynamic-to-static document mapping",
-  "main": "dist/index.js",
+  "description": "Keep your live and static documents in sync",
+  "main": "dist/domma.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/eugeneford/domma.git"
@@ -19,7 +19,7 @@
     "document",
     "iframe",
     "mapper",
-    "events"
+    "mutations"
   ],
   "author": "Eugene Ford",
   "license": "MIT",
