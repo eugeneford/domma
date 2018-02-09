@@ -16,6 +16,24 @@ describe('domma', () => {
     });
   });
 
+  describe('getStaticDocument', () => {
+    it('connected to driver', () => {
+      const domma = new Domma();
+      const spy = spyOn(domma.driver, 'getStaticDocument');
+      domma.getStaticDocument();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getLiveDocument', () => {
+    it('connected to driver', () => {
+      const domma = new Domma();
+      const spy = spyOn(domma.driver, 'getLiveDocument');
+      domma.getLiveDocument();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
   describe('connectLiveDocument', () => {
     it('connected new document to driver', () => {
       const domma = new Domma();

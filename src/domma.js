@@ -43,6 +43,14 @@ export default class Domma {
     this.mutationObserver.observe(liveDOM, this.config);
   }
 
+  getStaticDocument() {
+    return this.driver.getStaticDocument();
+  }
+
+  getLiveDocument() {
+    return this.driver.getLiveDocument();
+  }
+
   isTransactionResolved() {
     return this.transactionStatus === 'resolved';
   }
