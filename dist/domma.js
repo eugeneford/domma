@@ -752,6 +752,11 @@ var ReferenceMap = function () {
     key: 'getReference',
     value: function getReference(liveNode) {
       var id = this.getReferenceId(liveNode);
+      return this.getReferenceById(id);
+    }
+  }, {
+    key: 'getReferenceById',
+    value: function getReferenceById(id) {
       if (!this.isReferenceId(id)) return undefined;
       return this.map[id].staticNode;
     }

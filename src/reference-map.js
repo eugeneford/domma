@@ -128,6 +128,10 @@ export default class ReferenceMap {
 
   getReference(liveNode) {
     const id = this.getReferenceId(liveNode);
+    return this.getReferenceById(id);
+  }
+
+  getReferenceById(id) {
     if (!this.isReferenceId(id)) return undefined;
     return this.map[id].staticNode;
   }
