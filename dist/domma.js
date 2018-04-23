@@ -111,10 +111,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Domma = function () {
   function Domma(options) {
-    var _this = this;
-
     _classCallCheck(this, Domma);
 
+    this.options = options;
     this.config = {
       childList: true,
       attributes: true,
@@ -124,14 +123,7 @@ var Domma = function () {
       subtree: true
     };
 
-    this.driver = new _mutationDriver2.default(options);
-    this.transactionStatus = 'resolved';
-    this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
-    this.additiveEmitter = function (mutations) {
-      if (_this.isTransactionPending()) return;
-      _this.driver.addAdditiveMutations(mutations);
-    };
-    this.mutationObserver = new MutationObserver(this.additiveEmitter);
+    this.reset();
   }
 
   _createClass(Domma, [{
@@ -236,6 +228,20 @@ var Domma = function () {
 
       return conductTransaction;
     }()
+  }, {
+    key: 'reset',
+    value: function reset() {
+      var _this = this;
+
+      this.driver = new _mutationDriver2.default(this.options);
+      this.transactionStatus = 'resolved';
+      this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
+      this.additiveEmitter = function (mutations) {
+        if (_this.isTransactionPending()) return;
+        _this.driver.addAdditiveMutations(mutations);
+      };
+      this.mutationObserver = new MutationObserver(this.additiveEmitter);
+    }
   }]);
 
   return Domma;
@@ -264,7 +270,7 @@ var _mutationTypes = __webpack_require__(4);
 
 var _mutationTypes2 = _interopRequireDefault(_mutationTypes);
 
-var _referenceMap = __webpack_require__(6);
+var _referenceMap = __webpack_require__(5);
 
 var _referenceMap2 = _interopRequireDefault(_referenceMap);
 
@@ -585,8 +591,7 @@ exports.default = {
 };
 
 /***/ }),
-/* 5 */,
-/* 6 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -600,7 +605,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _generateUuid = __webpack_require__(7);
+var _generateUuid = __webpack_require__(6);
 
 var _generateUuid2 = _interopRequireDefault(_generateUuid);
 
@@ -872,7 +877,7 @@ var ReferenceMap = function () {
 exports.default = ReferenceMap;
 
 /***/ }),
-/* 7 */
+/* 6 */
 /***/ (function(module, exports) {
 
 module.exports = function () {

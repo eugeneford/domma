@@ -2,6 +2,7 @@ import MutationDriver from './mutation-driver';
 
 export default class Domma {
   constructor(options) {
+    this.options = options;
     this.config = {
       childList: true,
       attributes: true,
@@ -11,14 +12,7 @@ export default class Domma {
       subtree: true,
     };
 
-    this.driver = new MutationDriver(options);
-    this.transactionStatus = 'resolved';
-    this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
-    this.additiveEmitter = (mutations) => {
-      if (this.isTransactionPending()) return;
-      this.driver.addAdditiveMutations(mutations);
-    };
-    this.mutationObserver = new MutationObserver(this.additiveEmitter);
+    this.reset();
   }
 
   connectStaticDocument(staticDOM) {
@@ -73,5 +67,16 @@ export default class Domma {
     this.transactionStatus = await 'resolved';
 
     return this.driver.getLastTransaction();
+  }
+
+  reset() {
+    this.driver = new MutationDriver(this.options);
+    this.transactionStatus = 'resolved';
+    this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
+    this.additiveEmitter = (mutations) => {
+      if (this.isTransactionPending()) return;
+      this.driver.addAdditiveMutations(mutations);
+    };
+    this.mutationObserver = new MutationObserver(this.additiveEmitter);
   }
 }

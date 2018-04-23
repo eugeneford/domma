@@ -138,6 +138,27 @@ describe('domma', () => {
     });
   });
 
+  describe('reset', () => {
+    it('reset internal state', (done) => {
+      const domma = new Domma();
+      const dom = document.implementation.createHTMLDocument();
+
+      domma.connectStaticDocument(dom);
+      domma.composeLiveDocument();
+
+      domma.conductTransaction((liveDOM) => {
+        liveDOM.body.insertAdjacentHTML('afterbegin', '<div>hello world</div>');
+      }).then(() => {
+        domma.reset();
+        expect(domma.driver.referenceMap.map).toEqual({});
+        expect(domma.driver.getAdditiveMutations()).toEqual([]);
+        expect(domma.getStaticDocument()).toBeUndefined();
+        expect(domma.getLiveDocument()).toBeUndefined();
+        done();
+      });
+    });
+  });
+
   describe('additiveEmitter', () => {
     it('delegated additive mutations to driver', () => {
       const domma = new Domma();

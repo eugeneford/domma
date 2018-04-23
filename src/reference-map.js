@@ -3,7 +3,7 @@ import {
   getNodeByTreePath,
   getTreePathOfNode,
   isDocumentNode,
-  isElementNode, isNode,
+  isElementNode,
   traverseNode,
 } from 'anodum';
 

@@ -1,6 +1,5 @@
 import {
   isDocumentNode,
-  isTextNode,
   isElementNode,
   traverseNode,
 } from 'anodum';
