@@ -71,7 +71,7 @@ export default class Domma {
 
   reset() {
     if (this.transactionObserver) this.transactionObserver.disconnect();
-    if (this.mutationObserver) this.mutationObserver.disconnect(); 
+    if (this.mutationObserver) this.mutationObserver.disconnect();
 
     this.driver = new MutationDriver(this.options);
     this.transactionStatus = 'resolved';

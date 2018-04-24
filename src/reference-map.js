@@ -20,12 +20,15 @@ export default class ReferenceMap {
   }
 
   saveReference(liveNode, staticNode, id = generateUuid()) {
-    liveNode.setAttribute(this.options.referenceAttribute, id);
+    if (liveNode.getAttribute(this.options.referenceAttribute) !== id) {
+      liveNode.setAttribute(this.options.referenceAttribute, id);
+    }
+
     this.map[id] = { staticNode };
     return id;
   }
 
-  composeStaticReference(liveNode, id) {
+  composeStaticReference(liveNode) {
     if (!isDocumentNode(liveNode) && !isElementNode(liveNode)) {
       throw new TypeError('liveNode is not neither Document nor Element');
     }
@@ -39,8 +42,9 @@ export default class ReferenceMap {
       path.splice(0, rootPath.length, 0);
 
       const sNode = getNodeByTreePath(staticNode, path);
+      const id = lNode.getAttribute(this.options.referenceAttribute);
 
-      if (id && liveNode === lNode) {
+      if (id) {
         this.saveReference(lNode, sNode, id);
       } else {
         this.saveReference(lNode, sNode);
@@ -52,7 +56,7 @@ export default class ReferenceMap {
     return staticNode;
   }
 
-  composeLiveReference(staticNode, id) {
+  composeLiveReference(staticNode) {
     if (!isDocumentNode(staticNode) && !isElementNode(staticNode)) {
       throw new TypeError('staticNode is not neither Document nor Element');
     }
@@ -64,8 +68,9 @@ export default class ReferenceMap {
       if (!isElementNode(lNode)) return;
 
       const sNode = getNodeByTreePath(staticRoot, path);
+      const id = lNode.getAttribute(this.options.referenceAttribute);
 
-      if (id && liveNode === lNode) {
+      if (id) {
         this.saveReference(lNode, sNode, id);
       } else {
         this.saveReference(lNode, sNode);

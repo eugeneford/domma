@@ -248,4 +248,31 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('liveNode and its children have the same uuid after sync', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument('integration');
+    staticDOM.body.innerHTML = '<div id="main" class="main"><section id="section-1"><div class="container"><h1>Hello World</h1></div></section><section id="section-2"></section></div>';
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    const mainBefore = domma.getLiveDocument().getElementById('main').dataset.uuid;
+    const section1Before = domma.getLiveDocument().getElementById('section-1').dataset.uuid;
+    const section2Before = domma.getLiveDocument().getElementById('section-2').dataset.uuid;
+
+    domma.conductTransaction((liveDOM) => {
+      const refElement = liveDOM.getElementById('section-1');
+      refElement.insertAdjacentHTML('afterend', '<section>new content</section>');
+    }).then(() => {
+      const mainAfter = domma.getLiveDocument().getElementById('main').dataset.uuid;
+      const section1After = domma.getLiveDocument().getElementById('section-1').dataset.uuid;
+      const section2After = domma.getLiveDocument().getElementById('section-2').dataset.uuid;
+
+      expect(mainBefore).toBe(mainAfter);
+      expect(section1Before).toBe(section1After);
+      expect(section2Before).toBe(section2After);
+      done();
+    });
+  });
 });
