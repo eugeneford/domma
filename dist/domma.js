@@ -233,6 +233,9 @@ var Domma = function () {
     value: function reset() {
       var _this = this;
 
+      if (this.transactionObserver) this.transactionObserver.disconnect();
+      if (this.mutationObserver) this.mutationObserver.disconnect();
+
       this.driver = new _mutationDriver2.default(this.options);
       this.transactionStatus = 'resolved';
       this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
@@ -631,13 +634,16 @@ var ReferenceMap = function () {
     value: function saveReference(liveNode, staticNode) {
       var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
 
-      liveNode.setAttribute(this.options.referenceAttribute, id);
+      if (liveNode.getAttribute(this.options.referenceAttribute) !== id) {
+        liveNode.setAttribute(this.options.referenceAttribute, id);
+      }
+
       this.map[id] = { staticNode: staticNode };
       return id;
     }
   }, {
     key: 'composeStaticReference',
-    value: function composeStaticReference(liveNode, id) {
+    value: function composeStaticReference(liveNode) {
       var _this = this;
 
       if (!(0, _anodum.isDocumentNode)(liveNode) && !(0, _anodum.isElementNode)(liveNode)) {
@@ -653,8 +659,9 @@ var ReferenceMap = function () {
         path.splice(0, rootPath.length, 0);
 
         var sNode = (0, _anodum.getNodeByTreePath)(staticNode, path);
+        var id = lNode.getAttribute(_this.options.referenceAttribute);
 
-        if (id && liveNode === lNode) {
+        if (id) {
           _this.saveReference(lNode, sNode, id);
         } else {
           _this.saveReference(lNode, sNode);
@@ -667,7 +674,7 @@ var ReferenceMap = function () {
     }
   }, {
     key: 'composeLiveReference',
-    value: function composeLiveReference(staticNode, id) {
+    value: function composeLiveReference(staticNode) {
       var _this2 = this;
 
       if (!(0, _anodum.isDocumentNode)(staticNode) && !(0, _anodum.isElementNode)(staticNode)) {
@@ -681,8 +688,9 @@ var ReferenceMap = function () {
         if (!(0, _anodum.isElementNode)(lNode)) return;
 
         var sNode = (0, _anodum.getNodeByTreePath)(staticRoot, path);
+        var id = lNode.getAttribute(_this2.options.referenceAttribute);
 
-        if (id && liveNode === lNode) {
+        if (id) {
           _this2.saveReference(lNode, sNode, id);
         } else {
           _this2.saveReference(lNode, sNode);
