@@ -275,4 +275,25 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('additive mutations of additive child nodes of element are reduced', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument();
+    staticDOM.body.innerHTML = '<section id="section"><div class="container">Content</div></section>';
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    const liveDOM = domma.getLiveDocument();
+    liveDOM.body.firstChild.insertAdjacentHTML('afterbegin', '<div id="bg"></div>');
+    liveDOM.body.firstChild.firstChild.setAttribute('width', '100');
+    liveDOM.body.firstChild.firstChild.setAttribute('height', '200');
+
+    domma.conductTransaction((lDom) => {
+      lDom.body.insertAdjacentHTML('beforeend', '<div>new content</div>');
+    }).then(() => {
+      expect(staticDOM.body.innerHTML).toBe('<section id="section"><div class="container">Content</div></section><div>new content</div>');
+      done();
+    });
+  });
 });

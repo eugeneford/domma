@@ -108,6 +108,7 @@ export default class MutationDriver {
         const id = this.referenceMap.getReferenceId(addedLiveNode);
         this.referenceMap.removeReference(id);
         this.referenceMap.unbind(addedLiveNode);
+        this.reduceAdditiveMutations(addedLiveNode);
       } else {
         let staticNode;
         if (nextStaticSibling) {
