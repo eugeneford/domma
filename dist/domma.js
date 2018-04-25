@@ -130,6 +130,7 @@ var Domma = function () {
     key: 'connectStaticDocument',
     value: function connectStaticDocument(staticDOM) {
       this.driver.connectStaticDocument(staticDOM);
+      this.driver.referenceMap.connectStaticDocument(staticDOM);
     }
   }, {
     key: 'composeLiveDocument',
@@ -630,6 +631,11 @@ var ReferenceMap = function () {
   }
 
   _createClass(ReferenceMap, [{
+    key: 'connectStaticDocument',
+    value: function connectStaticDocument(staticDocument) {
+      this.staticDocument = staticDocument;
+    }
+  }, {
     key: 'saveReference',
     value: function saveReference(liveNode, staticNode) {
       var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
@@ -650,7 +656,12 @@ var ReferenceMap = function () {
         throw new TypeError('liveNode is not neither Document nor Element');
       }
 
-      var staticNode = liveNode.cloneNode(true);
+      if (!this.staticDocument) {
+        throw new ReferenceError('static document is not connected');
+      }
+
+      var staticDOM = this.staticDocument;
+      var staticNode = staticDOM.importNode(liveNode, true);
       var rootPath = (0, _anodum.getTreePathOfNode)(liveNode);
 
       (0, _anodum.traverseNode)(liveNode, function (lNode, path) {

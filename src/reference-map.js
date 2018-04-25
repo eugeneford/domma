@@ -19,6 +19,10 @@ export default class ReferenceMap {
     this.map = {};
   }
 
+  connectStaticDocument(staticDocument) {
+    this.staticDocument = staticDocument;
+  }
+
   saveReference(liveNode, staticNode, id = generateUuid()) {
     if (liveNode.getAttribute(this.options.referenceAttribute) !== id) {
       liveNode.setAttribute(this.options.referenceAttribute, id);
@@ -33,7 +37,12 @@ export default class ReferenceMap {
       throw new TypeError('liveNode is not neither Document nor Element');
     }
 
-    const staticNode = liveNode.cloneNode(true);
+    if (!this.staticDocument) {
+      throw new ReferenceError('static document is not connected');
+    }
+
+    const staticDOM = this.staticDocument;
+    const staticNode = staticDOM.importNode(liveNode, true);
     const rootPath = getTreePathOfNode(liveNode);
 
     traverseNode(liveNode, (lNode, path) => {

@@ -17,6 +17,7 @@ export default class Domma {
 
   connectStaticDocument(staticDOM) {
     this.driver.connectStaticDocument(staticDOM);
+    this.driver.referenceMap.connectStaticDocument(staticDOM);
   }
 
   composeLiveDocument() {

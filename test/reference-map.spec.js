@@ -20,6 +20,16 @@ describe('ReferenceMap', () => {
     });
   });
 
+  describe('connectStaticDocument', () => {
+    it('is connected', () => {
+      const referenceMap = new ReferenceMap();
+      const staticDocument = document.implementation.createHTMLDocument();
+      referenceMap.connectStaticDocument(staticDocument);
+
+      expect(referenceMap.staticDocument).toBe(staticDocument);
+    });
+  });
+
   describe('saveReference', () => {
     let referenceMap;
     let liveNode;
@@ -49,25 +59,34 @@ describe('ReferenceMap', () => {
   describe('composeStaticReference', () => {
     let referenceMap;
     let refAttribute;
+    let staticDocument;
 
     beforeEach(() => {
       referenceMap = new ReferenceMap();
       refAttribute = referenceMap.options.referenceAttribute;
+      staticDocument = document.implementation.createHTMLDocument();
+      referenceMap.connectStaticDocument(staticDocument);
     });
 
     it('TypeError is thrown for text node', () => {
-      const node = document.createTextNode('');
+      const node = staticDocument.createTextNode('');
       expect(() => referenceMap.composeStaticReference(node)).toThrowError(TypeError);
     });
 
     it('TypeError is thrown for comment node', () => {
-      const node = document.createComment('');
+      const node = staticDocument.createComment('');
       expect(() => referenceMap.composeStaticReference(node)).toThrowError(TypeError);
+    });
+
+    it('ReferenceError is thrown when static document is not connected', () => {
+      referenceMap.staticDocument = undefined;
+      const node = staticDocument.createElement('div');
+      expect(() => referenceMap.composeStaticReference(node)).toThrowError(ReferenceError);
     });
 
     it('callback is called', (done) => {
       referenceMap.options.forEachReferenceSave = () => done();
-      referenceMap.composeStaticReference(document.createElement('div'));
+      referenceMap.composeStaticReference(staticDocument.createElement('div'));
     });
 
     it('node is composed', (done) => {
@@ -81,7 +100,7 @@ describe('ReferenceMap', () => {
         count += 1;
         if (count === 2) done();
       };
-      const liveNode = document.createElement('div');
+      const liveNode = staticDocument.createElement('div');
       liveNode.innerHTML = '<p>text</p>';
       const staticNode = referenceMap.composeStaticReference(liveNode);
       expect(staticNode.hasAttribute(refAttribute)).toBe(false);
@@ -403,10 +422,13 @@ describe('ReferenceMap', () => {
   describe('appendReference', () => {
     let referenceMap;
     let refAttribute;
+    let staticDocument;
 
     beforeEach(() => {
       referenceMap = new ReferenceMap();
       refAttribute = referenceMap.options.referenceAttribute;
+      staticDocument = document.implementation.createHTMLDocument();
+      referenceMap.connectStaticDocument(staticDocument);
     });
 
     it('ReferenceError is thrown when reference with target id is not found', () => {
@@ -415,8 +437,8 @@ describe('ReferenceMap', () => {
 
     it('reference is appended', () => {
       const containerId = 'container-id';
-      const container = document.createElement('div');
-      const element = document.createElement('h1');
+      const container = staticDocument.createElement('div');
+      const element = staticDocument.createElement('h1');
 
       container.setAttribute(refAttribute, containerId);
       referenceMap.map[containerId] = { staticNode: container };
@@ -430,10 +452,13 @@ describe('ReferenceMap', () => {
   describe('insertReferenceBefore', () => {
     let referenceMap;
     let refAttribute;
+    let staticDocument;
 
     beforeEach(() => {
       referenceMap = new ReferenceMap();
       refAttribute = referenceMap.options.referenceAttribute;
+      staticDocument = document.implementation.createHTMLDocument();
+      referenceMap.connectStaticDocument(staticDocument);
     });
 
     it('ReferenceError is thrown when reference with target id is not found', () => {
@@ -441,10 +466,10 @@ describe('ReferenceMap', () => {
     });
 
     it('reference is inserted', () => {
-      const container = document.createElement('div');
+      const container = staticDocument.createElement('div');
       const referenceId = 'reference-id';
-      const reference = document.createElement('p');
-      const element = document.createElement('h1');
+      const reference = staticDocument.createElement('p');
+      const element = staticDocument.createElement('h1');
       container.appendChild(reference);
 
       container.setAttribute(refAttribute, referenceId);
@@ -459,10 +484,13 @@ describe('ReferenceMap', () => {
   describe('replaceReference', () => {
     let referenceMap;
     let refAttribute;
+    let staticDocument;
 
     beforeEach(() => {
       referenceMap = new ReferenceMap();
       refAttribute = referenceMap.options.referenceAttribute;
+      staticDocument = document.implementation.createHTMLDocument();
+      referenceMap.connectStaticDocument(staticDocument);
     });
 
     it('ReferenceError is thrown when reference with target id is not found', () => {
@@ -470,10 +498,10 @@ describe('ReferenceMap', () => {
     });
 
     it('reference is inserted', () => {
-      const container = document.createElement('div');
+      const container = staticDocument.createElement('div');
       const referenceId = 'reference-id';
-      const reference = document.createElement('p');
-      const element = document.createElement('h1');
+      const reference = staticDocument.createElement('p');
+      const element = staticDocument.createElement('h1');
       container.appendChild(reference);
 
       container.setAttribute(refAttribute, referenceId);
