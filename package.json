@@ -1,6 +1,6 @@
 {
   "name": "domma",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "Keep your live and static documents in sync",
   "main": "dist/domma.js",
   "repository": {
