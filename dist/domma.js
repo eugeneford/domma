@@ -395,6 +395,7 @@ var MutationDriver = function () {
           var id = _this.referenceMap.getReferenceId(addedLiveNode);
           _this.referenceMap.removeReference(id);
           _this.referenceMap.unbind(addedLiveNode);
+          _this.reduceAdditiveMutations(addedLiveNode);
         } else {
           var staticNode = void 0;
           if (nextStaticSibling) {
