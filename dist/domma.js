@@ -197,25 +197,12 @@ var Domma = function () {
               case 5:
                 this.transactionStatus = _context.sent;
                 _context.next = 8;
-                return this.transactionObserver.observe(liveDOM, this.config);
-
-              case 8:
-                _context.next = 10;
                 return transaction(liveDOM);
 
-              case 10:
-                _context.next = 12;
-                return this.transactionObserver.disconnect();
-
-              case 12:
-                _context.next = 14;
-                return 'resolved';
-
-              case 14:
-                this.transactionStatus = _context.sent;
+              case 8:
                 return _context.abrupt('return', this.driver.getLastTransaction());
 
-              case 16:
+              case 9:
               case 'end':
                 return _context.stop();
             }
@@ -240,11 +227,15 @@ var Domma = function () {
       this.driver = new _mutationDriver2.default(this.options);
       this.transactionStatus = 'resolved';
       this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
-      this.additiveEmitter = function (mutations) {
-        if (_this.isTransactionPending()) return;
-        _this.driver.addAdditiveMutations(mutations);
+      this.mutationEmitter = function (mutations) {
+        if (_this.isTransactionPending()) {
+          _this.driver.conductTransaction(mutations);
+          _this.transactionStatus = 'resolved';
+        } else {
+          _this.driver.addAdditiveMutations(mutations);
+        }
       };
-      this.mutationObserver = new MutationObserver(this.additiveEmitter);
+      this.mutationObserver = new MutationObserver(this.mutationEmitter);
     }
   }]);
 

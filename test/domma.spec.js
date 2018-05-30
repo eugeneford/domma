@@ -159,21 +159,21 @@ describe('domma', () => {
     });
   });
 
-  describe('additiveEmitter', () => {
+  describe('mutationEmitter', () => {
     it('delegated additive mutations to driver', () => {
       const domma = new Domma();
       const driverSpy = spyOn(domma.driver, 'addAdditiveMutations');
       domma.transactionStatus = 'resolved';
-      domma.additiveEmitter();
+      domma.mutationEmitter();
       expect(driverSpy).toHaveBeenCalled();
     });
 
-    it('did nothing when transaction is pending', () => {
+    it('delegated transaction mutations to driver', () => {
       const domma = new Domma();
-      const driverSpy = spyOn(domma.driver, 'addAdditiveMutations');
+      const driverSpy = spyOn(domma.driver, 'conductTransaction');
       domma.transactionStatus = 'pending';
-      domma.additiveEmitter();
-      expect(driverSpy).toHaveBeenCalledTimes(0);
+      domma.mutationEmitter();
+      expect(driverSpy).toHaveBeenCalled();
     });
   });
 });

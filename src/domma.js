@@ -62,10 +62,7 @@ export default class Domma {
     }
 
     this.transactionStatus = await 'pending';
-    await this.transactionObserver.observe(liveDOM, this.config);
     await transaction(liveDOM);
-    await this.transactionObserver.disconnect();
-    this.transactionStatus = await 'resolved';
 
     return this.driver.getLastTransaction();
   }
@@ -77,10 +74,14 @@ export default class Domma {
     this.driver = new MutationDriver(this.options);
     this.transactionStatus = 'resolved';
     this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
-    this.additiveEmitter = (mutations) => {
-      if (this.isTransactionPending()) return;
-      this.driver.addAdditiveMutations(mutations);
+    this.mutationEmitter = (mutations) => {
+      if (this.isTransactionPending()) {
+        this.driver.conductTransaction(mutations);
+        this.transactionStatus = 'resolved';
+      } else {
+        this.driver.addAdditiveMutations(mutations);
+      }
     };
-    this.mutationObserver = new MutationObserver(this.additiveEmitter);
+    this.mutationObserver = new MutationObserver(this.mutationEmitter);
   }
 }
