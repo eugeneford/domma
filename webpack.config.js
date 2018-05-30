@@ -8,9 +8,8 @@ module.exports = {
     libraryTarget: 'umd',
     libraryExport: 'default',
   },
-
+  devtool: 'source-map',
   externals: ["anodum"],
-
   module: {
     loaders: [{
       test: /\.js$/,
