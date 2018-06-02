@@ -45,6 +45,8 @@ export default class ReferenceMap {
     const staticNode = staticDOM.importNode(liveNode, true);
     const rootPath = getTreePathOfNode(liveNode);
 
+    staticNode.removeAttribute(this.options.referenceAttribute);
+
     traverseNode(liveNode, (lNode, path) => {
       if (!isElementNode(lNode)) return;
 

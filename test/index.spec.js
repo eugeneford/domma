@@ -296,4 +296,20 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('should remove additive mutation from parent node once child is removed', (done) => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument();
+    staticDOM.body.innerHTML = '<div></div>';
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.conductTransaction((lDom) => {
+      lDom.body.removeChild(lDom.body.firstChild);
+    }).then(() => {
+      expect(staticDOM.body.outerHTML).toBe('<body></body>');
+      done();
+    });
+  });
 });
