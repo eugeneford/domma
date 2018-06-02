@@ -656,6 +656,8 @@ var ReferenceMap = function () {
       var staticNode = staticDOM.importNode(liveNode, true);
       var rootPath = (0, _anodum.getTreePathOfNode)(liveNode);
 
+      staticNode.removeAttribute(this.options.referenceAttribute);
+
       (0, _anodum.traverseNode)(liveNode, function (lNode, path) {
         if (!(0, _anodum.isElementNode)(lNode)) return;
 
