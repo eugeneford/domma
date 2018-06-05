@@ -601,13 +601,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _generateUuid = __webpack_require__(6);
-
-var _generateUuid2 = _interopRequireDefault(_generateUuid);
-
 var _anodum = __webpack_require__(0);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -620,6 +614,7 @@ var ReferenceMap = function () {
       forEachReferenceSave: function forEachReferenceSave() {}
     }, options);
     this.map = {};
+    this.referenceCounter = 1;
   }
 
   _createClass(ReferenceMap, [{
@@ -629,15 +624,16 @@ var ReferenceMap = function () {
     }
   }, {
     key: 'saveReference',
-    value: function saveReference(liveNode, staticNode) {
-      var id = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _generateUuid2.default)();
+    value: function saveReference(liveNode, staticNode, id) {
+      var referenceId = id || 'ref_' + this.referenceCounter;
 
-      if (liveNode.getAttribute(this.options.referenceAttribute) !== id) {
-        liveNode.setAttribute(this.options.referenceAttribute, id);
+      if (liveNode.getAttribute(this.options.referenceAttribute) !== referenceId) {
+        liveNode.setAttribute(this.options.referenceAttribute, referenceId);
       }
 
-      this.map[id] = { staticNode: staticNode };
-      return id;
+      this.map[referenceId] = { staticNode: staticNode };
+      this.referenceCounter += 1;
+      return referenceId;
     }
   }, {
     key: 'composeStaticReference',
@@ -893,27 +889,6 @@ var ReferenceMap = function () {
 }();
 
 exports.default = ReferenceMap;
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports) {
-
-module.exports = function () {
-  var lut = [];
-  for (var i = 0; i < 256; i++) {
-    lut[i] = (i < 16 ? '0' : '') + i.toString(16);
-  }
-
-  var getRandomNumber = function () {
-    return Math.random() * 0x100000000 >>> 0;
-  };
-
-  var d0 = getRandomNumber();
-  var d1 = getRandomNumber();
-  var d2 = getRandomNumber();
-  var d3 = getRandomNumber();
-  return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' + lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f >>> 0x40] + lut[d1 >> 24 & 0xff] + '-' + lut[d2 & 0x3f >>> 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] + lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
-};
 
 /***/ })
 /******/ ])["default"];

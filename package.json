@@ -47,7 +47,6 @@
     "webpack": "^3.9.1"
   },
   "dependencies": {
-    "anodum": "^1.0.1",
-    "generate-uuid": "^1.0.6"
+    "anodum": "^1.0.1"
   }
 }

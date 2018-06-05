@@ -1,4 +1,3 @@
-import generateUuid from 'generate-uuid';
 import {
   getNodeByTreePath,
   getTreePathOfNode,
@@ -17,19 +16,23 @@ export default class ReferenceMap {
       ...options,
     };
     this.map = {};
+    this.referenceCounter = 1;
   }
 
   connectStaticDocument(staticDocument) {
     this.staticDocument = staticDocument;
   }
 
-  saveReference(liveNode, staticNode, id = generateUuid()) {
-    if (liveNode.getAttribute(this.options.referenceAttribute) !== id) {
-      liveNode.setAttribute(this.options.referenceAttribute, id);
+  saveReference(liveNode, staticNode, id) {
+    const referenceId = id || `ref_${this.referenceCounter}`;
+
+    if (liveNode.getAttribute(this.options.referenceAttribute) !== referenceId) {
+      liveNode.setAttribute(this.options.referenceAttribute, referenceId);
     }
 
-    this.map[id] = { staticNode };
-    return id;
+    this.map[referenceId] = { staticNode };
+    this.referenceCounter += 1;
+    return referenceId;
   }
 
   composeStaticReference(liveNode) {
