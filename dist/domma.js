@@ -753,6 +753,32 @@ var ReferenceMap = function () {
       return referenceId;
     }
   }, {
+    key: 'getFirstChildReferenceId',
+    value: function getFirstChildReferenceId(liveNode) {
+      var referenceId = void 0;
+      var node = liveNode.firstElementChild;
+      while (node) {
+        referenceId = this.getReferenceId(node);
+        if (referenceId) break;
+        node = node.nextElementSibling;
+      }
+
+      return referenceId;
+    }
+  }, {
+    key: 'getLastChildReferenceId',
+    value: function getLastChildReferenceId(liveNode) {
+      var referenceId = void 0;
+      var node = liveNode.lastElementChild;
+      while (node) {
+        referenceId = this.getReferenceId(node);
+        if (referenceId) break;
+        node = node.previousElementSibling;
+      }
+
+      return referenceId;
+    }
+  }, {
     key: 'hasReference',
     value: function hasReference(liveNode) {
       return this.isReferenceId(this.getReferenceId(liveNode));

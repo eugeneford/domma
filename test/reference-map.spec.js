@@ -275,6 +275,48 @@ describe('ReferenceMap', () => {
     });
   });
 
+  describe('getFirstChildReferenceId', () => {
+    let referenceMap;
+    let refAttribute;
+
+    beforeEach(() => {
+      referenceMap = new ReferenceMap();
+      refAttribute = referenceMap.options.referenceAttribute;
+    });
+
+    it('returns correct id', () => {
+      const parentId = 'parent-id';
+      const targetId = 'current-id';
+
+      const container = document.createElement('div');
+      container.innerHTML = `<div ${refAttribute}="${parentId}"><p></p><b ${refAttribute}="${targetId}"></b></div>`;
+
+      const parent = container.firstChild;
+      expect(referenceMap.getFirstChildReferenceId(parent)).toBe(targetId);
+    });
+  });
+
+  describe('getLastChildReferenceId', () => {
+    let referenceMap;
+    let refAttribute;
+
+    beforeEach(() => {
+      referenceMap = new ReferenceMap();
+      refAttribute = referenceMap.options.referenceAttribute;
+    });
+
+    it('returns correct id', () => {
+      const parentId = 'parent-id';
+      const targetId = 'current-id';
+
+      const container = document.createElement('div');
+      container.innerHTML = `<div ${refAttribute}="${parentId}"><b ${refAttribute}="${targetId}"></b><p></p></div>`;
+
+      const parent = container.firstChild;
+      expect(referenceMap.getLastChildReferenceId(parent)).toBe(targetId);
+    });
+  });
+
   describe('hasReference', () => {
     let referenceMap;
     let refAttribute;
