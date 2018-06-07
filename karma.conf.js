@@ -8,7 +8,6 @@ module.exports = function (config) {
     basePath: '',
     frameworks: ['jasmine'],
     files: [
-      'node_modules/babel-polyfill/dist/polyfill.min.js',
       'test/index.spec.js',
     ],
     preprocessors: {
