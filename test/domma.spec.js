@@ -172,6 +172,7 @@ describe('domma', () => {
       const domma = new Domma();
       const driverSpy = spyOn(domma.driver, 'conductTransaction');
       domma.transactionStatus = 'pending';
+      domma.resolve = () => {};
       domma.mutationEmitter();
       expect(driverSpy).toHaveBeenCalled();
     });

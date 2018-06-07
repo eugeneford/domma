@@ -54,17 +54,16 @@ export default class Domma {
     return this.transactionStatus === 'pending';
   }
 
-  async conductTransaction(transaction) {
-    const liveDOM = this.driver.getLiveDocument();
-
-    if (!liveDOM) {
-      throw new ReferenceError('live document is not connected');
-    }
-
-    this.transactionStatus = await 'pending';
-    await transaction(liveDOM);
-
-    return this.driver.getLastTransaction();
+  conductTransaction(transaction) {
+    return new Promise((resolve, reject) => {
+      const liveDOM = this.driver.getLiveDocument();
+      if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+      resolve(liveDOM);
+    }).then(liveDOM => new Promise((resolve) => {
+      this.transactionStatus = 'pending';
+      this.resolve = resolve;
+      transaction(liveDOM);
+    }));
   }
 
   reset() {
@@ -78,6 +77,7 @@ export default class Domma {
       if (this.isTransactionPending()) {
         this.driver.conductTransaction(mutations);
         this.transactionStatus = 'resolved';
+        this.resolve(this.driver.getLastTransaction());
       } else {
         this.driver.addAdditiveMutations(mutations);
       }

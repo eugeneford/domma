@@ -105,8 +105,6 @@ var _mutationDriver2 = _interopRequireDefault(_mutationDriver);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Domma = function () {
@@ -174,52 +172,25 @@ var Domma = function () {
     }
   }, {
     key: 'conductTransaction',
-    value: function () {
-      var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(transaction) {
-        var liveDOM;
-        return regeneratorRuntime.wrap(function _callee$(_context) {
-          while (1) {
-            switch (_context.prev = _context.next) {
-              case 0:
-                liveDOM = this.driver.getLiveDocument();
+    value: function conductTransaction(transaction) {
+      var _this = this;
 
-                if (liveDOM) {
-                  _context.next = 3;
-                  break;
-                }
-
-                throw new ReferenceError('live document is not connected');
-
-              case 3:
-                _context.next = 5;
-                return 'pending';
-
-              case 5:
-                this.transactionStatus = _context.sent;
-                _context.next = 8;
-                return transaction(liveDOM);
-
-              case 8:
-                return _context.abrupt('return', this.driver.getLastTransaction());
-
-              case 9:
-              case 'end':
-                return _context.stop();
-            }
-          }
-        }, _callee, this);
-      }));
-
-      function conductTransaction(_x) {
-        return _ref.apply(this, arguments);
-      }
-
-      return conductTransaction;
-    }()
+      return new Promise(function (resolve, reject) {
+        var liveDOM = _this.driver.getLiveDocument();
+        if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+        resolve(liveDOM);
+      }).then(function (liveDOM) {
+        return new Promise(function (resolve) {
+          _this.transactionStatus = 'pending';
+          _this.resolve = resolve;
+          transaction(liveDOM);
+        });
+      });
+    }
   }, {
     key: 'reset',
     value: function reset() {
-      var _this = this;
+      var _this2 = this;
 
       if (this.transactionObserver) this.transactionObserver.disconnect();
       if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -228,11 +199,12 @@ var Domma = function () {
       this.transactionStatus = 'resolved';
       this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
       this.mutationEmitter = function (mutations) {
-        if (_this.isTransactionPending()) {
-          _this.driver.conductTransaction(mutations);
-          _this.transactionStatus = 'resolved';
+        if (_this2.isTransactionPending()) {
+          _this2.driver.conductTransaction(mutations);
+          _this2.transactionStatus = 'resolved';
+          _this2.resolve(_this2.driver.getLastTransaction());
         } else {
-          _this.driver.addAdditiveMutations(mutations);
+          _this2.driver.addAdditiveMutations(mutations);
         }
       };
       this.mutationObserver = new MutationObserver(this.mutationEmitter);
