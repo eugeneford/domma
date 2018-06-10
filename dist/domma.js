@@ -751,6 +751,26 @@ var ReferenceMap = function () {
       return referenceId;
     }
   }, {
+    key: 'getChildReferenceId',
+    value: function getChildReferenceId(liveNode, childIndex) {
+      var referenceId = void 0;
+      var index = 0;
+      var node = liveNode.firstElementChild;
+      while (node) {
+        if (this.hasReference(node)) {
+          if (index === childIndex) {
+            referenceId = this.getReferenceId(node);
+            break;
+          }
+
+          index += 1;
+        }
+        node = node.nextElementSibling;
+      }
+
+      return referenceId;
+    }
+  }, {
     key: 'indexOfReferenceId',
     value: function indexOfReferenceId(liveNode, referenceId) {
       var node = liveNode.firstElementChild;
