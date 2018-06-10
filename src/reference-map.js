@@ -165,6 +165,20 @@ export default class ReferenceMap {
     return referenceId;
   }
 
+  indexOfReferenceId(liveNode, referenceId) {
+    let node = liveNode.firstElementChild;
+    while (node) {
+      if (node.getAttribute(this.options.referenceAttribute) === referenceId) {
+        const staticNode = this.getReferenceById(referenceId);
+        const nodesList = Array.prototype.slice.call(staticNode.parentNode.childNodes);
+        return nodesList.indexOf(staticNode);
+      }
+      node = node.nextElementSibling;
+    }
+
+    return -1;
+  }
+
   hasReference(liveNode) {
     return this.isReferenceId(this.getReferenceId(liveNode));
   }

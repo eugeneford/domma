@@ -317,6 +317,67 @@ describe('ReferenceMap', () => {
     });
   });
 
+  describe('indexOfReference', () => {
+    let referenceMap;
+    let refAttribute;
+
+    beforeEach(() => {
+      referenceMap = new ReferenceMap();
+      refAttribute = referenceMap.options.referenceAttribute;
+    });
+
+    it('returns correct element index', () => {
+      const childStaticNode = document.createElement('section');
+      const childLiveNode = document.createElement('section');
+      const childId = 'ref_2';
+      childLiveNode.setAttribute(refAttribute, childId);
+      referenceMap.map[childId] = { staticNode: childStaticNode };
+
+      const childStaticNode2 = document.createElement('section');
+      const childLiveNode2 = document.createElement('section');
+      const childId2 = 'ref_3';
+      childLiveNode2.setAttribute(refAttribute, childId2);
+      referenceMap.map[childId2] = { staticNode: childStaticNode2 };
+
+      const containerStaticNode = document.createElement('div');
+      const containerLiveNode = document.createElement('div');
+      const containerId = 'ref_1';
+      containerLiveNode.setAttribute(refAttribute, containerId);
+      referenceMap.map[containerId] = { staticNode: containerStaticNode };
+
+      containerLiveNode.appendChild(childLiveNode);
+      containerLiveNode.insertAdjacentElement('afterbegin', document.createElement('p'));
+      containerLiveNode.insertAdjacentElement('afterbegin', document.createElement('p'));
+      containerLiveNode.insertAdjacentElement('afterbegin', document.createElement('p'));
+      containerLiveNode.insertAdjacentElement('afterbegin', childLiveNode2);
+
+      containerStaticNode.appendChild(childStaticNode2);
+      containerStaticNode.appendChild(childStaticNode);
+
+      const index = referenceMap.indexOfReferenceId(containerLiveNode, 'ref_2');
+
+      expect(index).toBe(1);
+    });
+
+    it('returns -1 if referenceId is not a child of target container', () => {
+      const childStaticNode = document.createElement('section');
+      const childLiveNode = document.createElement('section');
+      const childId = 'ref_2';
+      childLiveNode.setAttribute(refAttribute, childId);
+      referenceMap.map[childId] = { staticNode: childStaticNode };
+
+      const containerStaticNode = document.createElement('div');
+      const containerLiveNode = document.createElement('div');
+      const containerId = 'ref_1';
+      containerLiveNode.setAttribute(refAttribute, containerId);
+      referenceMap.map[containerId] = { staticNode: containerStaticNode };
+
+      const index = referenceMap.indexOfReferenceId(containerLiveNode, 'ref_2');
+
+      expect(index).toBe(-1);
+    });
+  });
+
   describe('hasReference', () => {
     let referenceMap;
     let refAttribute;
