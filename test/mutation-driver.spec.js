@@ -340,6 +340,31 @@ describe('MutationDriver', () => {
     });
   });
 
+  describe('hasAdditiveMutations', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+      driver.additiveMutations = [
+        {
+          type: 'attributes',
+          target: document.createElement('div'),
+        },
+        {
+          type: 'childList',
+          target: document.createElement('h1'),
+        },
+      ];
+    });
+
+    describe('when target element has additive mutations', () => {
+      it('should return true', () => {
+        const liveNode = driver.additiveMutations[0].target;
+        expect(driver.hasAdditiveMutations(liveNode)).toBeTruthy();
+      });
+    });
+  });
+
   describe('reduceAdditiveMutations', () => {
     let driver;
     let targetNode;

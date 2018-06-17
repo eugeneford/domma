@@ -186,6 +186,10 @@ export default class MutationDriver {
     });
   }
 
+  hasAdditiveMutations(liveNode, types = mutationTypes.all) {
+    return this.getAdditiveMutations(liveNode, types).length > 0;
+  }
+
   conductAttributeMutation(mutation) {
     const liveNode = mutation.target;
     const reference = this.referenceMap.getReference(liveNode);

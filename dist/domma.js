@@ -452,6 +452,13 @@ var MutationDriver = function () {
       });
     }
   }, {
+    key: 'hasAdditiveMutations',
+    value: function hasAdditiveMutations(liveNode) {
+      var types = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _mutationTypes2.default.all;
+
+      return this.getAdditiveMutations(liveNode, types).length > 0;
+    }
+  }, {
     key: 'conductAttributeMutation',
     value: function conductAttributeMutation(mutation) {
       var liveNode = mutation.target;
