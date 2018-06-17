@@ -17,7 +17,6 @@ export default class Domma {
 
   connectStaticDocument(staticDOM) {
     this.driver.connectStaticDocument(staticDOM);
-    this.driver.referenceMap.connectStaticDocument(staticDOM);
   }
 
   composeLiveDocument() {
@@ -66,6 +65,30 @@ export default class Domma {
     }));
   }
 
+  insertAdjacentElement(element, refElement, position) {
+    return new Promise((resolve, reject) => {
+      const liveDOM = this.driver.getLiveDocument();
+      if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+      resolve();
+    }).then(() => {
+      this.transactionStatus = 'pending';
+      this.driver.insertAdjacentElement(element, refElement, position);
+      this.transactionStatus = 'resolved';
+    });
+  }
+
+  removeElement(element) {
+    return new Promise((resolve, reject) => {
+      const liveDOM = this.driver.getLiveDocument();
+      if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+      resolve();
+    }).then(() => {
+      this.transactionStatus = 'pending';
+      this.driver.removeElement(element);
+      this.transactionStatus = 'resolved';
+    });
+  }
+
   reset() {
     if (this.transactionObserver) this.transactionObserver.disconnect();
     if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -77,7 +100,7 @@ export default class Domma {
       if (this.isTransactionPending()) {
         this.driver.conductTransaction(mutations);
         this.transactionStatus = 'resolved';
-        this.resolve(this.driver.getLastTransaction());
+        this.resolve();
       } else {
         this.driver.addAdditiveMutations(mutations);
       }

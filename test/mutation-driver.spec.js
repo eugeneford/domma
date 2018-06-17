@@ -438,6 +438,63 @@ describe('MutationDriver', () => {
     });
   });
 
+  describe('insertAdjacentElement', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+
+      const staticDOM = document.implementation.createHTMLDocument('');
+      const liveDOM = driver.referenceMap.composeLiveReference(staticDOM);
+
+      driver.connectStaticDocument(staticDOM);
+      driver.connectLiveDocument(liveDOM);
+    });
+
+    it('should insert target element into live and static documents', () => {
+      const staticDocument = driver.getStaticDocument();
+      const liveDocument = driver.getLiveDocument();
+      const element = liveDocument.createElement('div');
+      element.innerHTML = 'hello world';
+
+      driver.insertAdjacentElement(element, liveDocument.body, 'afterbegin');
+
+      expect(liveDocument.body.firstChild).toBeDefined();
+      expect(liveDocument.body.firstChild.tagName).toBe('DIV');
+      expect(liveDocument.body.firstChild.innerHTML).toBe('hello world');
+
+      expect(staticDocument.body.firstChild).toBeDefined();
+      expect(staticDocument.body.firstChild.tagName).toBe('DIV');
+      expect(staticDocument.body.firstChild.innerHTML).toBe('hello world');
+    });
+  });
+
+  describe('removeElement', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+
+      const staticDOM = document.implementation.createHTMLDocument('');
+      staticDOM.body.insertAdjacentHTML('afterbegin', '<div></div>');
+
+      const liveDOM = driver.referenceMap.composeLiveReference(staticDOM);
+
+      driver.connectStaticDocument(staticDOM);
+      driver.connectLiveDocument(liveDOM);
+    });
+
+    it('should remove target element from live and static documents', () => {
+      const staticDocument = driver.getStaticDocument();
+      const liveDocument = driver.getLiveDocument();
+
+      driver.removeElement(liveDocument.body.firstChild);
+
+      expect(liveDocument.body.firstChild).toBeNull();
+      expect(staticDocument.body.firstChild).toBeNull();
+    });
+  });
+
   describe('ejectAdditiveReferenceMapMutations', () => {
     let driver;
 

@@ -264,15 +264,15 @@ export default class ReferenceMap {
     return staticNode;
   }
 
-  insertReferenceBefore(liveNode, siblingId) {
-    if (!this.isReferenceId(siblingId)) {
-      throw new ReferenceError('reference with specified siblingId is not found');
+  insertReference(liveNode, refElementId, position) {
+    if (!this.isReferenceId(refElementId)) {
+      throw new ReferenceError('reference with specified refElementId is not found');
     }
 
-    const siblingNode = this.map[siblingId].staticNode;
+    const refElement = this.map[refElementId].staticNode;
     const staticNode = this.composeStaticReference(liveNode);
 
-    siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+    refElement.insertAdjacentElement(position, staticNode);
 
     return staticNode;
   }

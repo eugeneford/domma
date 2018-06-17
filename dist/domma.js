@@ -128,7 +128,6 @@ var Domma = function () {
     key: 'connectStaticDocument',
     value: function connectStaticDocument(staticDOM) {
       this.driver.connectStaticDocument(staticDOM);
-      this.driver.referenceMap.connectStaticDocument(staticDOM);
     }
   }, {
     key: 'composeLiveDocument',
@@ -188,9 +187,39 @@ var Domma = function () {
       });
     }
   }, {
+    key: 'insertAdjacentElement',
+    value: function insertAdjacentElement(element, refElement, position) {
+      var _this2 = this;
+
+      return new Promise(function (resolve, reject) {
+        var liveDOM = _this2.driver.getLiveDocument();
+        if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+        resolve();
+      }).then(function () {
+        _this2.transactionStatus = 'pending';
+        _this2.driver.insertAdjacentElement(element, refElement, position);
+        _this2.transactionStatus = 'resolved';
+      });
+    }
+  }, {
+    key: 'removeElement',
+    value: function removeElement(element) {
+      var _this3 = this;
+
+      return new Promise(function (resolve, reject) {
+        var liveDOM = _this3.driver.getLiveDocument();
+        if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+        resolve();
+      }).then(function () {
+        _this3.transactionStatus = 'pending';
+        _this3.driver.removeElement(element);
+        _this3.transactionStatus = 'resolved';
+      });
+    }
+  }, {
     key: 'reset',
     value: function reset() {
-      var _this2 = this;
+      var _this4 = this;
 
       if (this.transactionObserver) this.transactionObserver.disconnect();
       if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -199,12 +228,12 @@ var Domma = function () {
       this.transactionStatus = 'resolved';
       this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
       this.mutationEmitter = function (mutations) {
-        if (_this2.isTransactionPending()) {
-          _this2.driver.conductTransaction(mutations);
-          _this2.transactionStatus = 'resolved';
-          _this2.resolve(_this2.driver.getLastTransaction());
+        if (_this4.isTransactionPending()) {
+          _this4.driver.conductTransaction(mutations);
+          _this4.transactionStatus = 'resolved';
+          _this4.resolve();
         } else {
-          _this2.driver.addAdditiveMutations(mutations);
+          _this4.driver.addAdditiveMutations(mutations);
         }
       };
       this.mutationObserver = new MutationObserver(this.mutationEmitter);
@@ -268,6 +297,8 @@ var MutationDriver = function () {
       if (!(0, _anodum.isDocumentNode)(staticDOM)) {
         throw new TypeError('staticDOM is not a Document');
       }
+
+      this.referenceMap.connectStaticDocument(staticDOM);
 
       this.staticDOM = staticDOM;
     }
@@ -532,14 +563,21 @@ var MutationDriver = function () {
   }, {
     key: 'conductTransaction',
     value: function conductTransaction(mutations) {
-      var transaction = mutations;
-      transaction.forEach(this.conductMutation);
-      this.lastTransaction = transaction;
+      mutations.forEach(this.conductMutation);
     }
   }, {
-    key: 'getLastTransaction',
-    value: function getLastTransaction() {
-      return this.lastTransaction;
+    key: 'insertAdjacentElement',
+    value: function insertAdjacentElement(liveElement, liveRefElement, position) {
+      var refElementId = this.referenceMap.getReferenceId(liveRefElement);
+      this.referenceMap.insertReference(liveElement, refElementId, position);
+      liveRefElement.insertAdjacentElement(position, liveElement);
+    }
+  }, {
+    key: 'removeElement',
+    value: function removeElement(liveElement) {
+      var elementId = this.referenceMap.getReferenceId(liveElement);
+      this.referenceMap.removeReference(elementId);
+      liveElement.parentNode.removeChild(liveElement);
     }
   }]);
 
@@ -871,16 +909,16 @@ var ReferenceMap = function () {
       return staticNode;
     }
   }, {
-    key: 'insertReferenceBefore',
-    value: function insertReferenceBefore(liveNode, siblingId) {
-      if (!this.isReferenceId(siblingId)) {
-        throw new ReferenceError('reference with specified siblingId is not found');
+    key: 'insertReference',
+    value: function insertReference(liveNode, refElementId, position) {
+      if (!this.isReferenceId(refElementId)) {
+        throw new ReferenceError('reference with specified refElementId is not found');
       }
 
-      var siblingNode = this.map[siblingId].staticNode;
+      var refElement = this.map[refElementId].staticNode;
       var staticNode = this.composeStaticReference(liveNode);
 
-      siblingNode.parentNode.insertBefore(staticNode, siblingNode);
+      refElement.insertAdjacentElement(position, staticNode);
 
       return staticNode;
     }

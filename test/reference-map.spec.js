@@ -595,7 +595,7 @@ describe('ReferenceMap', () => {
     });
   });
 
-  describe('insertReferenceBefore', () => {
+  describe('insertReference', () => {
     let referenceMap;
     let refAttribute;
     let staticDocument;
@@ -608,7 +608,7 @@ describe('ReferenceMap', () => {
     });
 
     it('ReferenceError is thrown when reference with target id is not found', () => {
-      expect(() => referenceMap.insertReferenceBefore()).toThrowError(ReferenceError);
+      expect(() => referenceMap.insertReference()).toThrowError(ReferenceError);
     });
 
     it('reference is inserted', () => {
@@ -621,7 +621,7 @@ describe('ReferenceMap', () => {
       container.setAttribute(refAttribute, referenceId);
       referenceMap.map[referenceId] = { staticNode: reference };
 
-      const insertedElement = referenceMap.insertReferenceBefore(element, referenceId);
+      const insertedElement = referenceMap.insertReference(element, referenceId, 'beforebegin');
 
       expect(reference.previousSibling).toBe(insertedElement);
     });

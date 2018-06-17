@@ -30,6 +30,8 @@ export default class MutationDriver {
       throw new TypeError('staticDOM is not a Document');
     }
 
+    this.referenceMap.connectStaticDocument(staticDOM);
+
     this.staticDOM = staticDOM;
   }
 
@@ -259,12 +261,18 @@ export default class MutationDriver {
   }
 
   conductTransaction(mutations) {
-    const transaction = mutations;
-    transaction.forEach(this.conductMutation);
-    this.lastTransaction = transaction;
+    mutations.forEach(this.conductMutation);
   }
 
-  getLastTransaction() {
-    return this.lastTransaction;
+  insertAdjacentElement(liveElement, liveRefElement, position) {
+    const refElementId = this.referenceMap.getReferenceId(liveRefElement);
+    this.referenceMap.insertReference(liveElement, refElementId, position);
+    liveRefElement.insertAdjacentElement(position, liveElement);
+  }
+
+  removeElement(liveElement) {
+    const elementId = this.referenceMap.getReferenceId(liveElement);
+    this.referenceMap.removeReference(elementId);
+    liveElement.parentNode.removeChild(liveElement);
   }
 }

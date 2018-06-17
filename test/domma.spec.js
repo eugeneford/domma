@@ -138,6 +138,63 @@ describe('domma', () => {
     });
   });
 
+  describe('insertAdjacentElement', () => {
+    let domma;
+
+    beforeEach(() => {
+      const dom = document.implementation.createHTMLDocument();
+
+      domma = new Domma();
+      domma.connectStaticDocument(dom);
+      domma.composeLiveDocument();
+    });
+
+    it('should insert target element as a transaction change', (done) => {
+      const staticDocument = domma.getStaticDocument();
+      const liveDocument = domma.getLiveDocument();
+      const element = document.createElement('div');
+      element.innerHTML = 'hello world';
+
+      domma.insertAdjacentElement(element, liveDocument.body, 'afterbegin').then(() => {
+        expect(domma.driver.getAdditiveMutations().length).toBe(0);
+
+        expect(liveDocument.body.firstChild).toBeDefined();
+        expect(liveDocument.body.firstChild.tagName).toBe('DIV');
+        expect(liveDocument.body.firstChild.innerHTML).toBe('hello world');
+
+        expect(staticDocument.body.firstChild).toBeDefined();
+        expect(staticDocument.body.firstChild.tagName).toBe('DIV');
+        expect(staticDocument.body.firstChild.innerHTML).toBe('hello world');
+        done();
+      });
+    });
+  });
+
+  describe('removeElement', () => {
+    let domma;
+
+    beforeEach(() => {
+      const dom = document.implementation.createHTMLDocument();
+      dom.body.insertAdjacentHTML('afterbegin', '<div></div>');
+
+      domma = new Domma();
+      domma.connectStaticDocument(dom);
+      domma.composeLiveDocument();
+    });
+
+    it('should remove target element as a transaction change', (done) => {
+      const staticDocument = domma.getStaticDocument();
+      const liveDocument = domma.getLiveDocument();
+
+      domma.removeElement(liveDocument.body.firstChild).then(() => {
+        expect(domma.driver.getAdditiveMutations().length).toBe(0);
+        expect(liveDocument.body.firstChild).toBeNull();
+        expect(staticDocument.body.firstChild).toBeNull();
+        done();
+      });
+    });
+  });
+
   describe('reset', () => {
     it('reset internal state', (done) => {
       const domma = new Domma();
@@ -172,7 +229,8 @@ describe('domma', () => {
       const domma = new Domma();
       const driverSpy = spyOn(domma.driver, 'conductTransaction');
       domma.transactionStatus = 'pending';
-      domma.resolve = () => {};
+      domma.resolve = () => {
+      };
       domma.mutationEmitter();
       expect(driverSpy).toHaveBeenCalled();
     });
