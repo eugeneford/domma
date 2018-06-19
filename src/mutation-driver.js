@@ -166,7 +166,12 @@ export default class MutationDriver {
   }
 
   addAdditiveMutations(mutations) {
-    this.additiveMutations = this.additiveMutations.concat(mutations);
+    const filteredMutations = mutations.filter((mutation) => {
+      const refAttribute = this.referenceMap.options.referenceAttribute;
+      return mutation.attributeName !== refAttribute;
+    });
+
+    this.additiveMutations = this.additiveMutations.concat(filteredMutations);
   }
 
   reduceAdditiveMutations(liveNode, types = mutationTypes.all) {

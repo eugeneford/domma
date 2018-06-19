@@ -449,25 +449,32 @@ var MutationDriver = function () {
   }, {
     key: 'addAdditiveMutations',
     value: function addAdditiveMutations(mutations) {
-      this.additiveMutations = this.additiveMutations.concat(mutations);
+      var _this3 = this;
+
+      var filteredMutations = mutations.filter(function (mutation) {
+        var refAttribute = _this3.referenceMap.options.referenceAttribute;
+        return mutation.attributeName !== refAttribute;
+      });
+
+      this.additiveMutations = this.additiveMutations.concat(filteredMutations);
     }
   }, {
     key: 'reduceAdditiveMutations',
     value: function reduceAdditiveMutations(liveNode) {
-      var _this3 = this;
+      var _this4 = this;
 
       var types = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _mutationTypes2.default.all;
 
       var additiveMutations = this.getAdditiveMutations(liveNode, types);
 
       additiveMutations.forEach(function (mutation) {
-        var index = _this3.additiveMutations.indexOf(mutation);
-        _this3.additiveMutations.splice(index, 1);
+        var index = _this4.additiveMutations.indexOf(mutation);
+        _this4.additiveMutations.splice(index, 1);
         mutation.addedNodes.forEach(function (node) {
-          return _this3.reduceAdditiveMutations(node);
+          return _this4.reduceAdditiveMutations(node);
         });
         mutation.removedNodes.forEach(function (node) {
-          return _this3.reduceAdditiveMutations(node);
+          return _this4.reduceAdditiveMutations(node);
         });
       });
     }

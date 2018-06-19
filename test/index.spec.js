@@ -312,4 +312,21 @@ describe('integrations tests', () => {
       done();
     });
   });
+
+  it('hasAdditiveMutations should return false for data-uuid', () => {
+    const domma = new Domma();
+    const staticDOM = document.implementation.createHTMLDocument();
+
+    domma.connectStaticDocument(staticDOM);
+    domma.composeLiveDocument();
+
+    domma.conductTransaction((lDom) => {
+      lDom.body.insertAdjacentHTML('afterbegin', '<div></div>');
+    }).then(() => {
+      const liveDOM = domma.getLiveDocument();
+      const div = liveDOM.body.firstElementChild;
+
+      expect(domma.driver.hasAdditiveMutations(div)).toBe(false);
+    });
+  });
 });
