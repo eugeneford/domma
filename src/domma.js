@@ -89,6 +89,16 @@ export default class Domma {
     });
   }
 
+  synchronizeElement(element, preserveFilter) {
+    return new Promise((resolve, reject) => {
+      const liveDOM = this.driver.getLiveDocument();
+      if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+      resolve();
+    }).then(() => {
+      this.driver.synchronizeElement(element, preserveFilter);
+    });
+  }
+
   reset() {
     if (this.transactionObserver) this.transactionObserver.disconnect();
     if (this.mutationObserver) this.mutationObserver.disconnect();

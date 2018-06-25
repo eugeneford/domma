@@ -195,6 +195,47 @@ describe('domma', () => {
     });
   });
 
+  describe('synchronizeElement', () => {
+    let domma;
+
+    beforeEach((done) => {
+      const staticDocument = document.implementation.createHTMLDocument();
+
+      domma = new Domma();
+      domma.connectStaticDocument(staticDocument);
+      domma.composeLiveDocument();
+
+      const liveDocument = domma.getLiveDocument();
+      liveDocument.body.insertAdjacentHTML('afterbegin', '<h1>hello world</h1>');
+      liveDocument.body.insertAdjacentHTML('beforeend', '<p>some text</p>');
+
+      setTimeout(done, 100);
+    });
+
+    it('should synchronize element according to preserveFilter', (done) => {
+      const staticDocument = domma.getStaticDocument();
+      const liveDocument = domma.getLiveDocument();
+
+      domma.synchronizeElement(liveDocument.body, (mutation) => {
+        if (!mutation.addedNodes.length) return false;
+        return mutation.addedNodes[0].tagName === 'H1';
+      }).then(() => {
+        expect(liveDocument.body.childNodes.length).toBe(2);
+        expect(liveDocument.body.childNodes[0].tagName).toBe('H1');
+        expect(liveDocument.body.childNodes[0].innerHTML).toBe('hello world');
+        expect(liveDocument.body.childNodes[1].tagName).toBe('P');
+        expect(liveDocument.body.childNodes[1].innerHTML).toBe('some text');
+        expect(staticDocument.body.childNodes.length).toBe(1);
+        expect(staticDocument.body.childNodes[0].tagName).toBe('H1');
+        expect(staticDocument.body.childNodes[0].innerHTML).toBe('hello world');
+        expect(domma.driver.additiveMutations.length).toBe(1);
+        expect(domma.driver.additiveMutations[0].addedNodes[0].tagName).toBe('P');
+
+        done();
+      });
+    });
+  });
+
   describe('reset', () => {
     it('reset internal state', (done) => {
       const domma = new Domma();

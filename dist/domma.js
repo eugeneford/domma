@@ -217,9 +217,22 @@ var Domma = function () {
       });
     }
   }, {
+    key: 'synchronizeElement',
+    value: function synchronizeElement(element, preserveFilter) {
+      var _this4 = this;
+
+      return new Promise(function (resolve, reject) {
+        var liveDOM = _this4.driver.getLiveDocument();
+        if (!liveDOM) reject(new ReferenceError('live document is not connected'));
+        resolve();
+      }).then(function () {
+        _this4.driver.synchronizeElement(element, preserveFilter);
+      });
+    }
+  }, {
     key: 'reset',
     value: function reset() {
-      var _this4 = this;
+      var _this5 = this;
 
       if (this.transactionObserver) this.transactionObserver.disconnect();
       if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -228,12 +241,12 @@ var Domma = function () {
       this.transactionStatus = 'resolved';
       this.transactionObserver = new MutationObserver(this.driver.conductTransaction);
       this.mutationEmitter = function (mutations) {
-        if (_this4.isTransactionPending()) {
-          _this4.driver.conductTransaction(mutations);
-          _this4.transactionStatus = 'resolved';
-          _this4.resolve();
+        if (_this5.isTransactionPending()) {
+          _this5.driver.conductTransaction(mutations);
+          _this5.transactionStatus = 'resolved';
+          _this5.resolve();
         } else {
-          _this4.driver.addAdditiveMutations(mutations);
+          _this5.driver.addAdditiveMutations(mutations);
         }
       };
       this.mutationObserver = new MutationObserver(this.mutationEmitter);
@@ -283,7 +296,6 @@ var MutationDriver = function () {
       onAfterSync: function onAfterSync() {}
     }, options);
     this.additiveMutations = [];
-    this.lastTransaction = undefined;
     this.referenceMap = new _referenceMap2.default(options);
 
     this.conductTransaction = this.conductTransaction.bind(this);
@@ -340,6 +352,21 @@ var MutationDriver = function () {
       } else {
         this.referenceMap.removeReferenceAttribute(containerId, attributeName);
       }
+    }
+  }, {
+    key: 'ejectAdditiveCharacterDataMutation',
+    value: function ejectAdditiveCharacterDataMutation(liveNode, mutation) {
+      var oldValue = mutation.oldValue;
+
+
+      if (this.isAdditiveNode(liveNode)) return;
+
+      var liveParent = liveNode.parentNode;
+      var liveNodeIndex = Array.prototype.slice.call(liveParent.childNodes).indexOf(liveNode);
+      var staticParent = this.referenceMap.getReference(liveNode.parentNode);
+      var staticNode = staticParent.childNodes[liveNodeIndex];
+
+      staticNode.nodeValue = oldValue;
     }
   }, {
     key: 'ejectAdditiveChildListMutation',
@@ -497,6 +524,20 @@ var MutationDriver = function () {
       return this.getAdditiveMutations(liveNode, types).length > 0;
     }
   }, {
+    key: 'isAdditiveNode',
+    value: function isAdditiveNode(liveNode) {
+      return this.additiveMutations.some(function (mutation) {
+        if (mutation.type !== _mutationTypes2.default.childList) return false;
+        var addedNodes = mutation.addedNodes;
+
+        return addedNodes.some(function (node) {
+          var isAdditive = node === liveNode;
+          var isChildOfAdditive = (0, _anodum.isElementNode)(node) && (0, _anodum.isChildOfElement)(liveNode, node);
+          return isAdditive || isChildOfAdditive;
+        });
+      });
+    }
+  }, {
     key: 'conductAttributeMutation',
     value: function conductAttributeMutation(mutation) {
       var liveNode = mutation.target;
@@ -585,6 +626,40 @@ var MutationDriver = function () {
       var elementId = this.referenceMap.getReferenceId(liveElement);
       this.referenceMap.removeReference(elementId);
       liveElement.parentNode.removeChild(liveElement);
+    }
+  }, {
+    key: 'synchronizeElement',
+    value: function synchronizeElement(liveElement, preserveFilter) {
+      var _this5 = this;
+
+      var referenceId = this.referenceMap.getReferenceId(liveElement);
+      this.referenceMap.replaceReference(liveElement, referenceId);
+
+      (0, _anodum.traverseNode)(liveElement, function (liveNode) {
+        var mutations = _this5.getAdditiveMutations(liveNode);
+
+        mutations.reverse().forEach(function (mutation) {
+          var shouldPreserve = preserveFilter ? preserveFilter(mutation) : false;
+
+          if (shouldPreserve) {
+            var index = _this5.additiveMutations.indexOf(mutation);
+            _this5.additiveMutations.splice(index, 1);
+            return;
+          }
+
+          switch (mutation.type) {
+            case _mutationTypes2.default.attributes:
+              _this5.ejectAdditiveAttributeMutation(liveNode, mutation);
+              break;
+            case _mutationTypes2.default.characterData:
+              _this5.ejectAdditiveCharacterDataMutation(liveNode, mutation);
+              break;
+            default:
+              _this5.ejectAdditiveChildListMutation(liveNode, mutation);
+              break;
+          }
+        });
+      });
     }
   }]);
 

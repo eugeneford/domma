@@ -1,6 +1,7 @@
 import {
   isDocumentNode,
   isElementNode,
+  isChildOfElement,
   traverseNode,
 } from 'anodum';
 
@@ -17,7 +18,6 @@ export default class MutationDriver {
       ...options,
     };
     this.additiveMutations = [];
-    this.lastTransaction = undefined;
     this.referenceMap = new ReferenceMap(options);
 
     this.conductTransaction = this.conductTransaction.bind(this);
@@ -65,6 +65,19 @@ export default class MutationDriver {
     } else {
       this.referenceMap.removeReferenceAttribute(containerId, attributeName);
     }
+  }
+
+  ejectAdditiveCharacterDataMutation(liveNode, mutation) {
+    const { oldValue } = mutation;
+
+    if (this.isAdditiveNode(liveNode)) return;
+
+    const liveParent = liveNode.parentNode;
+    const liveNodeIndex = Array.prototype.slice.call(liveParent.childNodes).indexOf(liveNode);
+    const staticParent = this.referenceMap.getReference(liveNode.parentNode);
+    const staticNode = staticParent.childNodes[liveNodeIndex];
+
+    staticNode.nodeValue = oldValue;
   }
 
   ejectAdditiveChildListMutation(liveElement, mutation) {
@@ -197,6 +210,18 @@ export default class MutationDriver {
     return this.getAdditiveMutations(liveNode, types).length > 0;
   }
 
+  isAdditiveNode(liveNode) {
+    return this.additiveMutations.some((mutation) => {
+      if (mutation.type !== mutationTypes.childList) return false;
+      const { addedNodes } = mutation;
+      return addedNodes.some((node) => {
+        const isAdditive = node === liveNode;
+        const isChildOfAdditive = isElementNode(node) && isChildOfElement(liveNode, node);
+        return isAdditive || isChildOfAdditive;
+      });
+    });
+  }
+
   conductAttributeMutation(mutation) {
     const liveNode = mutation.target;
     const reference = this.referenceMap.getReference(liveNode);
@@ -279,5 +304,36 @@ export default class MutationDriver {
     const elementId = this.referenceMap.getReferenceId(liveElement);
     this.referenceMap.removeReference(elementId);
     liveElement.parentNode.removeChild(liveElement);
+  }
+
+  synchronizeElement(liveElement, preserveFilter) {
+    const referenceId = this.referenceMap.getReferenceId(liveElement);
+    this.referenceMap.replaceReference(liveElement, referenceId);
+
+    traverseNode(liveElement, (liveNode) => {
+      const mutations = this.getAdditiveMutations(liveNode);
+
+      mutations.reverse().forEach((mutation) => {
+        const shouldPreserve = preserveFilter ? preserveFilter(mutation) : false;
+
+        if (shouldPreserve) {
+          const index = this.additiveMutations.indexOf(mutation);
+          this.additiveMutations.splice(index, 1);
+          return;
+        }
+
+        switch (mutation.type) {
+          case mutationTypes.attributes:
+            this.ejectAdditiveAttributeMutation(liveNode, mutation);
+            break;
+          case mutationTypes.characterData:
+            this.ejectAdditiveCharacterDataMutation(liveNode, mutation);
+            break;
+          default:
+            this.ejectAdditiveChildListMutation(liveNode, mutation);
+            break;
+        }
+      });
+    });
   }
 }

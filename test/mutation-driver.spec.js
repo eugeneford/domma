@@ -365,6 +365,44 @@ describe('MutationDriver', () => {
     });
   });
 
+  describe('isAdditiveNode', () => {
+    describe('when node was added as an additive mutation', () => {
+      it('should return "true"', () => {
+        const driver = new MutationDriver();
+        const node = document.createTextNode('some text');
+        const mutationRecord = {
+          type: 'childList',
+          addedNodes: [node],
+        };
+
+        driver.addAdditiveMutations([mutationRecord]);
+
+        const isAdditive = driver.isAdditiveNode(node);
+
+        expect(isAdditive).toBeTruthy();
+      });
+    });
+
+    describe('when node was added as a child of node that was added as additive mutation', () => {
+      it('should return "true"', () => {
+        const driver = new MutationDriver();
+        const node = document.createElement('div');
+        node.innerHTML = 'hello world';
+
+        const mutationRecord = {
+          type: 'childList',
+          addedNodes: [node],
+        };
+
+        driver.addAdditiveMutations([mutationRecord]);
+
+        const isAdditive = driver.isAdditiveNode(node.firstChild);
+
+        expect(isAdditive).toBeTruthy();
+      });
+    });
+  });
+
   describe('reduceAdditiveMutations', () => {
     let driver;
     let targetNode;
@@ -495,6 +533,100 @@ describe('MutationDriver', () => {
     });
   });
 
+  describe('synchromizeElement', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+
+      const staticDOM = document.implementation.createHTMLDocument('');
+      staticDOM.body.innerHTML = 'hello world';
+
+      const liveDOM = driver.referenceMap.composeLiveReference(staticDOM);
+
+      driver.connectStaticDocument(staticDOM);
+      driver.connectLiveDocument(liveDOM);
+    });
+
+    describe('when preserve filter is not passed', () => {
+      it('should eject all additive mutations', () => {
+        const staticDOM = driver.getStaticDocument();
+        const liveDOM = driver.getLiveDocument();
+        const body = liveDOM.querySelector('body');
+
+        body.setAttribute('class', 'some-class');
+        const attributeMutation = {
+          type: 'attributes',
+          target: body,
+          attributeName: 'class',
+        };
+
+        body.firstChild.nodeValue = 'hello mutated';
+        const characterDataMutation = {
+          type: 'characterData',
+          target: body.firstChild,
+          oldValue: 'hello world',
+        };
+
+        const newNode = document.createElement('div');
+        body.insertAdjacentElement('afterbegin', newNode);
+        const childListMutation = {
+          type: 'childList',
+          target: body,
+          addedNodes: [newNode],
+          removedNodes: [],
+          nextSibling: body.firstChild,
+        };
+
+        const mutations = [attributeMutation, characterDataMutation, childListMutation];
+
+        driver.addAdditiveMutations(mutations);
+        driver.synchronizeElement(body);
+
+        expect(staticDOM.body.outerHTML).toBe('<body>hello world</body>');
+        expect(driver.additiveMutations).toEqual(mutations);
+      });
+    });
+
+    describe('when preserve filter is passed', () => {
+      it('should preserve some mutations according to that filter', () => {
+        const staticDOM = driver.getStaticDocument();
+        const liveDOM = driver.getLiveDocument();
+        const body = liveDOM.querySelector('body');
+
+        body.setAttribute('class', 'some-class');
+        const attributeMutation = {
+          type: 'attributes',
+          target: body,
+          attributeName: 'class',
+        };
+
+        body.firstChild.nodeValue = 'hello mutated';
+        const characterDataMutation = {
+          type: 'characterData',
+          target: body.firstChild,
+          oldValue: 'hello world',
+        };
+
+        const newNode = document.createElement('div');
+        body.insertAdjacentElement('afterbegin', newNode);
+        const childListMutation = {
+          type: 'childList',
+          target: body,
+          addedNodes: [newNode],
+          removedNodes: [],
+          nextSibling: body.firstChild,
+        };
+
+        driver.addAdditiveMutations([attributeMutation, characterDataMutation, childListMutation]);
+        driver.synchronizeElement(body, mutation => mutation.type === 'characterData');
+
+        expect(staticDOM.body.outerHTML).toBe('<body>hello mutated</body>');
+        expect(driver.additiveMutations).toEqual([attributeMutation, childListMutation]);
+      });
+    });
+  });
+
   describe('ejectAdditiveReferenceMapMutations', () => {
     let driver;
 
@@ -511,6 +643,46 @@ describe('MutationDriver', () => {
       getReferenceSpy.and.returnValue(staticElement);
       driver.ejectAdditiveReferenceMapMutations(liveElement);
       expect(unbindSpy).toHaveBeenCalledWith(staticElement);
+    });
+  });
+
+  describe('ejectAdditiveCharacterDataMutation', () => {
+    let driver;
+
+    beforeEach(() => {
+      driver = new MutationDriver();
+    });
+
+    describe('when target node is an additive one', () => {
+      it('should do nothing', () => {
+        const isAdditiveNodeSpy = spyOn(driver, 'isAdditiveNode').and.returnValue(true);
+        const getReferenceSpy = spyOn(driver.referenceMap, 'getReference');
+        const liveNode = document.createTextNode('hello world');
+        const mutation = { oldValue: 'hello John' };
+
+        driver.ejectAdditiveCharacterDataMutation(liveNode, mutation);
+
+        expect(isAdditiveNodeSpy).toHaveBeenCalledWith(liveNode);
+        expect(getReferenceSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('when target node is a static one', () => {
+      it('should revert target mutation', () => {
+        const mutation = { oldValue: 'hello world' };
+        const liveNode = document.createElement('div');
+        const staticNode = document.createElement('div');
+
+        liveNode.innerHTML = 'mutated';
+        staticNode.innerHTML = 'mutated';
+
+        spyOn(driver, 'isAdditiveNode').and.returnValue(false);
+        spyOn(driver.referenceMap, 'getReference').and.returnValue(staticNode);
+
+        driver.ejectAdditiveCharacterDataMutation(liveNode.firstChild, mutation);
+
+        expect(staticNode.firstChild.nodeValue).toBe(mutation.oldValue);
+      });
     });
   });
 
